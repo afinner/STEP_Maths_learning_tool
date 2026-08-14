@@ -231,7 +231,7 @@ kbd {
   border-left: 3px solid var(--accent);
   font-size: var(--size-lg);
   line-height: 1.45;
-  max-width: var(--measure);
+  max-width: var(--measure-card);
 }
 
 .claim-card .attribution {
@@ -244,14 +244,14 @@ kbd {
 
 .boundary-card {
   border-left: 3px solid var(--accent);
-  max-width: var(--measure);
+  max-width: var(--measure-card);
   font-size: var(--size-lg);
   line-height: 1.45;
 }
 
 .repair-card {
   border-left: 3px solid var(--repair);
-  max-width: var(--measure);
+  max-width: var(--measure-card);
 }
 
 /* ---- Bank ------------------------------------------------------------- */
@@ -497,6 +497,12 @@ kbd {
   font-size: var(--size-lg);
 }
 
+/* Readouts that are words rather than numbers: monospace would read as code. */
+.widget-readout .value-text {
+  font-family: var(--font-ui);
+  font-weight: var(--weight-medium);
+}
+
 .widget-readout .value-decisive {
   color: var(--accent);
 }
@@ -588,8 +594,7 @@ kbd {
 .chart .axis-title {
   fill: var(--ink-muted);
   font-size: 11px;
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .chart .series {

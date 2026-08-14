@@ -131,11 +131,13 @@ export function LineChart({
                 strokeWidth={1.5}
               />
               {r.label ? (
+                // Left-aligned: the right-hand end of the frame belongs to the
+                // x-axis title, and a rule sitting near the axis would collide.
                 <text
                   className="tick-label"
-                  x={innerWidth}
-                  y={y(r.at) - 5}
-                  textAnchor="end"
+                  x={4}
+                  y={y(r.at) - 6}
+                  textAnchor="start"
                   fill={r.tone === 'break' ? 'var(--chart-2)' : 'var(--ink-faint)'}
                 >
                   {r.label}

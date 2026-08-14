@@ -89,7 +89,7 @@ export default function FixtureWidget(props: WidgetHostProps) {
               </div>
               <div>
                 <span className="term">Reads as</span>
-                <span className="value">
+                <span className="value value-text">
                   {converging ? 'settling to zero' : 'not settling at all'}
                 </span>
               </div>

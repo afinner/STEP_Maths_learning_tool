@@ -75,7 +75,10 @@
   --space-8: 4.5rem;
 
   /* ---- Measure and layout --------------------------------------------- */
+  /* Prose measure, card measure, and the full content column. Cards sit between
+     the other two: readable, but not a ragged narrow column beside the widget. */
   --measure: 34rem;
+  --measure-card: 42rem;
   --measure-wide: 52rem;
 
   /* ---- Surface ---------------------------------------------------------*/
