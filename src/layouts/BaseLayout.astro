@@ -1,0 +1,58 @@
+---
+import '../styles/global.css';
+import 'katex/dist/katex.min.css';
+import { withBase } from '../lib/base';
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://example.invalid');
+---
+
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical.href} />
+    <link rel="icon" href={withBase('/favicon.svg')} type="image/svg+xml" />
+    <meta name="color-scheme" content="light dark" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="shell">
+        <a class="wordmark" href={withBase('/')}>Failure modes</a>
+        <span class="tagline">A catalogue of false beliefs in mathematical reasoning</span>
+      </div>
+    </header>
+
+    <main class="shell">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="shell">
+        <p>
+          Code is MIT licensed. Module text and figures are licensed
+          <a
+            href="https://creativecommons.org/licenses/by/4.0/"
+            rel="license noopener"
+            target="_blank">CC&nbsp;BY&nbsp;4.0</a
+          >.
+        </p>
+        <p>
+          <a href="https://github.com/afinner/STEP_Maths_learning_tool" rel="noopener"
+            >Source on GitHub</a
+          >
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

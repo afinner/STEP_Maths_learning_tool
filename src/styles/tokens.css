@@ -1,0 +1,129 @@
+/*
+ * Every colour, size, weight and duration in the site is declared here and
+ * nowhere else. Components reference tokens only. Replacing this one file
+ * changes the whole look; if you find yourself writing a literal colour or a
+ * magic pixel value in a component, add a token instead.
+ *
+ * Dark mode follows the reader's system setting. There is deliberately no
+ * toggle: it is UI that earns nothing on a reference site.
+ */
+
+:root {
+  /* ---- Palette: light ------------------------------------------------- */
+  --paper: #fcfcfa;
+  --paper-raised: #ffffff;
+  --paper-sunken: #f2f1ec;
+  --ink: #1b1b1a;
+  --ink-muted: #55534e;
+  --ink-faint: #86837c;
+  --rule: #e0ded6;
+  --rule-strong: #c9c6bc;
+
+  /* Accent carries links, the decisive quantity, and the primary chart series. */
+  --accent: #2f5d9e;
+  --accent-strong: #23477a;
+  --accent-wash: #eaf0f9;
+
+  /* Break beat: where the claim fails. Warm, never alarming. */
+  --break: #a4501d;
+  --break-wash: #fbf0e7;
+
+  /* Repair beat: the corrected model. */
+  --repair: #2f6b4f;
+  --repair-wash: #e9f2ed;
+
+  /* Chart series. Ordered; use in sequence. Distinguishable in both themes
+     and for the common colour-vision deficiencies. */
+  --chart-1: #2f5d9e;
+  --chart-2: #a4501d;
+  --chart-3: #2f6b4f;
+  --chart-4: #6b4c9a;
+  --chart-grid: #e4e2da;
+  --chart-axis: #86837c;
+  --chart-band: rgba(47, 93, 158, 0.12);
+  --chart-band-break: rgba(164, 80, 29, 0.14);
+
+  /* ---- Type ----------------------------------------------------------- */
+  --font-prose: ui-serif, Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --size-xs: 0.78rem;
+  --size-sm: 0.875rem;
+  --size-base: 1.0625rem;
+  --size-lg: 1.25rem;
+  --size-xl: 1.6rem;
+  --size-2xl: 2.1rem;
+
+  --leading-tight: 1.25;
+  --leading-body: 1.65;
+
+  --weight-normal: 400;
+  --weight-medium: 550;
+  --weight-bold: 700;
+
+  --tracking-label: 0.08em;
+
+  /* ---- Space ---------------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  /* ---- Measure and layout --------------------------------------------- */
+  --measure: 34rem;
+  --measure-wide: 52rem;
+
+  /* ---- Surface ---------------------------------------------------------*/
+  --radius: 4px;
+  --radius-lg: 8px;
+  --shadow: 0 1px 2px rgba(27, 27, 26, 0.06), 0 4px 12px rgba(27, 27, 26, 0.04);
+  --focus-ring: 2px solid var(--accent);
+  --focus-offset: 2px;
+
+  --duration: 120ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #16171a;
+    --paper-raised: #1d1f23;
+    --paper-sunken: #111214;
+    --ink: #e8e6e1;
+    --ink-muted: #a9a69f;
+    --ink-faint: #7c7973;
+    --rule: #2c2f34;
+    --rule-strong: #3d4147;
+
+    --accent: #86b0e6;
+    --accent-strong: #a8c8f0;
+    --accent-wash: #1a2534;
+
+    --break: #e39a63;
+    --break-wash: #2a1f17;
+
+    --repair: #7dbd9c;
+    --repair-wash: #16241d;
+
+    --chart-1: #86b0e6;
+    --chart-2: #e39a63;
+    --chart-3: #7dbd9c;
+    --chart-4: #b49ae0;
+    --chart-grid: #26292e;
+    --chart-axis: #7c7973;
+    --chart-band: rgba(134, 176, 230, 0.16);
+    --chart-band-break: rgba(227, 154, 99, 0.16);
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+  }
+}
