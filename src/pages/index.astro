@@ -1,0 +1,44 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { modulePath } from '../lib/base';
+import { formatDate, isoDate } from '../lib/format';
+
+/** Newest first: the catalogue is a record of what has been worked out, in order. */
+const modules = (await getCollection('modules')).sort(
+  (a, b) => b.data.added.getTime() - a.data.added.getTime(),
+);
+---
+
+<BaseLayout
+  title="Failure modes — a catalogue of false beliefs in mathematical reasoning"
+  description="Each module names one false belief, shows a case where it gives the wrong answer, and identifies the single quantity that decides when it fails."
+>
+  <section class="intro prose">
+    <h1>Where mathematical intuition breaks</h1>
+    <p>
+      Each entry names one false belief, gives a concrete case where it produces a
+      wrong answer, and identifies the single quantity that decides when it fails.
+      They are meant to be read in any order, or one at a time when the belief in
+      question is the one getting in your way.
+    </p>
+  </section>
+
+  <ul class="module-list">
+    {
+      modules.map((entry) => (
+        <li>
+          <a href={modulePath(entry.id)}>
+            <span class="claim">“{entry.data.claim}”</span>
+            <span class="meta">
+              <time datetime={isoDate(entry.data.added)}>{formatDate(entry.data.added)}</time>
+            </span>
+            <span class="context">
+              {entry.data.title} · {entry.data.context}
+            </span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</BaseLayout>

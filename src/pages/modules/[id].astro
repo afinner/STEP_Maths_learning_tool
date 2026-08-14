@@ -1,0 +1,29 @@
+---
+import { getCollection, render } from 'astro:content';
+import ModuleLayout from '../../layouts/ModuleLayout.astro';
+import ModuleWidgetIsland from '../../components/ModuleWidgetIsland';
+
+/**
+ * One route for every module, now and forever. Adding a module means adding a
+ * directory under src/content/modules — nothing here changes.
+ */
+export async function getStaticPaths() {
+  const modules = await getCollection('modules');
+  return modules.map((entry) => ({ params: { id: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const widgetPath = `/src/content/modules/${entry.id}/widget.tsx`;
+---
+
+<ModuleLayout data={entry.data}>
+  <Content />
+  <ModuleWidgetIsland
+    slot="widget"
+    client:load
+    widgetPath={widgetPath}
+    hypotheses={entry.data.hypotheses}
+    predictionPrompt={entry.data.predictionPrompt}
+  />
+</ModuleLayout>

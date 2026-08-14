@@ -1,0 +1,101 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import type { ModuleFrontmatter } from '../schema';
+import { formatDate, isoDate, renderMath } from '../lib/format';
+
+interface Props {
+  data: ModuleFrontmatter;
+  /** Fixtures render through this same template; they just say so. */
+  isFixture?: boolean;
+}
+
+const { data, isFixture = false } = Astro.props;
+
+/*
+ * The six beats, in this order, for every module: Claim, Run, Break, Repair,
+ * Boundary, Bank. The template owns the order — a module supplies the substance
+ * and cannot rearrange it. Break is emitted by ModuleShell rather than here,
+ * because it shares parameter state with the widget; everything else is frontmatter.
+ */
+---
+
+<BaseLayout title={`${data.title} — Failure modes`} description={data.claim}>
+  {
+    isFixture && (
+      <p class="fixture-banner">
+        Fixture. This page exists to exercise the build pipeline and is excluded
+        from the production site.
+      </p>
+    )
+  }
+
+  <article class="module">
+    <header class="module-header">
+      <p class="eyebrow">
+        <span>{data.context}</span>
+        <span aria-hidden="true">·</span>
+        <time datetime={isoDate(data.added)}>{formatDate(data.added)}</time>
+      </p>
+      <h1>{data.title}</h1>
+    </header>
+
+    <section class="beat beat-claim" aria-labelledby="beat-claim-label">
+      <h2 class="beat-label" id="beat-claim-label">Claim</h2>
+      <blockquote class="card claim-card">
+        <p>{data.claim}</p>
+        <span class="attribution">The belief, stated the way it is actually held</span>
+      </blockquote>
+    </section>
+
+    <section class="beat beat-run" aria-labelledby="beat-run-label">
+      <h2 class="beat-label" id="beat-run-label">Run</h2>
+      <div class="prose"><slot /></div>
+    </section>
+
+    <div class="run-widget">
+      <!--
+        The island arrives through a slot rather than a prop: Astro resolves a
+        hydrated component's script URL from the static imports of the file that
+        renders it, so the route file has to be the one to import it. The island
+        continues into the Break beat, because the ledger has to move the widget.
+      -->
+      <slot name="widget" />
+    </div>
+
+    <section class="beat beat-repair" aria-labelledby="beat-repair-label">
+      <h2 class="beat-label" id="beat-repair-label">Repair</h2>
+      <div class="card repair-card">
+        <p>{data.repairedIntuition}</p>
+      </div>
+    </section>
+
+    <section class="beat beat-boundary" aria-labelledby="beat-boundary-label">
+      <h2 class="beat-label" id="beat-boundary-label">Boundary</h2>
+      <div class="card boundary-card">
+        <p>{data.boundary}</p>
+      </div>
+    </section>
+
+    <section class="beat beat-bank" aria-labelledby="beat-bank-label">
+      <h2 class="beat-label" id="beat-bank-label">Bank</h2>
+      <div class="bank">
+        <dl>
+          <dt>Decisive quantity</dt>
+          <dd>
+            <div class="decisive">
+              <span class="symbol" set:html={renderMath(data.decisiveQuantity.symbol)} />
+              <span class="name">{data.decisiveQuantity.name}</span>
+            </div>
+            <p>{data.decisiveQuantity.description}</p>
+          </dd>
+
+          <dt>Carry away</dt>
+          <dd>{data.boundary}</dd>
+
+          <dt>Provenance</dt>
+          <dd>{data.provenance}</dd>
+        </dl>
+      </div>
+    </section>
+  </article>
+</BaseLayout>
