@@ -79,14 +79,37 @@ export type LearningEvent =
 
 export type EventSink = (event: LearningEvent) => void;
 
-const sinks = new Set<EventSink>();
-const log: LearningEvent[] = [];
+/**
+ * The log and its sinks hang off a global, not off this module's scope.
+ *
+ * A module page carries more than one island — the beats, and the closing bank
+ * and measurement — and the last of those reads back commitments made in the
+ * first. Whether a bundler gives two islands one shared copy of this module or
+ * two copies is its business, not something the calibration read-back should
+ * depend on, so the store is keyed by symbol and shared either way.
+ */
+interface EventStore {
+  log: LearningEvent[];
+  sinks: Set<EventSink>;
+}
+
+const STORE_KEY = Symbol.for('failure-modes.events');
+
+function store(): EventStore {
+  const host = globalThis as unknown as Record<symbol, EventStore | undefined>;
+  const existing = host[STORE_KEY];
+  if (existing) return existing;
+  const created: EventStore = { log: [], sinks: new Set() };
+  host[STORE_KEY] = created;
+  return created;
+}
 
 /**
  * Register a sink. This is the whole extension point: a future persistent store
  * subscribes here and no component changes.
  */
 export function subscribe(sink: EventSink): () => void {
+  const { sinks } = store();
   sinks.add(sink);
   return () => {
     sinks.delete(sink);
@@ -94,26 +117,35 @@ export function subscribe(sink: EventSink): () => void {
 }
 
 export function emit(event: LearningEvent): void {
+  const { log, sinks } = store();
   log.push(event);
   for (const sink of sinks) sink(event);
 }
 
 /** Everything emitted this page-load, oldest first. */
 export function history(): readonly LearningEvent[] {
-  return log;
+  return store().log;
 }
 
 /** The learner's commitments, for reading back to them at the end. */
 export function commits(): readonly CommitEvent[] {
-  return log.filter((event): event is CommitEvent => event.type === 'commit');
+  return store().log.filter((event): event is CommitEvent => event.type === 'commit');
 }
 
 export function commitFor(promptId: string): CommitEvent | undefined {
   return commits().find((event) => event.prompt_id === promptId);
 }
 
+/** How a commitment turned out, where the module marked it at the time. */
+export function revealFor(promptId: string): RevealEvent | undefined {
+  return store()
+    .log.filter((event): event is RevealEvent => event.type === 'reveal')
+    .find((event) => event.prompt_id === promptId);
+}
+
 /** Tests only: the log is page-lifetime state and nothing else should clear it. */
 export function resetEvents(): void {
+  const { log, sinks } = store();
   log.length = 0;
   sinks.clear();
 }

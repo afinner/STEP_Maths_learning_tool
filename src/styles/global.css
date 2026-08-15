@@ -737,6 +737,118 @@ kbd {
   margin-bottom: var(--space-4);
 }
 
+/* ---- Closing: bank and measurement -------------------------------------- */
+.closing {
+  display: grid;
+  gap: var(--space-6);
+  margin-top: var(--space-7);
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-6);
+}
+
+.bank-slot {
+  display: block;
+  font-size: var(--size-xs);
+  color: var(--ink-faint);
+}
+
+.measure-heading {
+  font-family: var(--font-ui);
+  font-size: var(--size-base);
+  font-weight: var(--weight-medium);
+  margin-top: var(--space-5);
+}
+
+.measure-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.measure-item {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+}
+
+.measure-expression {
+  font-family: var(--font-mono);
+  font-size: var(--size-sm);
+}
+
+.measure-number,
+.measure-multi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.measure-number input[type='text'] {
+  font-family: var(--font-mono);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  width: 7rem;
+}
+
+.measure-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+}
+
+.measure-multi + .button {
+  margin-top: var(--space-3);
+}
+
+.measure-outcome {
+  display: grid;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+}
+
+.measure-correct {
+  color: var(--repair);
+  font-weight: var(--weight-medium);
+}
+
+.measure-incorrect {
+  color: var(--break);
+  font-weight: var(--weight-medium);
+}
+
+.measure-explanation {
+  color: var(--ink-muted);
+}
+
+.data-table td.is-wrong {
+  color: var(--break);
+}
+
+/* The line the module ends on, unchanged from where it was introduced. */
+.takeaway {
+  font-size: var(--size-xl);
+  line-height: 1.35;
+  max-width: var(--measure-card);
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--accent);
+}
+
 /* ---- Hypothesis ledger -------------------------------------------------- */
 .ledger {
   list-style: none;

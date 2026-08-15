@@ -97,5 +97,12 @@ const { data, isFixture = false } = Astro.props;
         </dl>
       </div>
     </section>
+
+    <!--
+      Optional. A module may add to the end of the page — a bank of questions,
+      or items that measure whether the mechanism landed. The six beats above
+      are fixed and come first; this cannot reorder them.
+    -->
+    <slot name="closing" />
   </article>
 </BaseLayout>

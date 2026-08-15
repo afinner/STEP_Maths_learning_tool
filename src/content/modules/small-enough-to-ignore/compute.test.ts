@@ -1,21 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import {
   ALPHA,
+  BANK,
   DEGENERATE_THETA,
   HOOK_TABLE_N,
   ORDERS,
+  ORDER_ITEMS,
   SAFE_THETA,
   THETA_MAX_DEGREES,
   THETA_MIN_DEGREES,
   WITNESS_ALPHAS,
+  bankByAmplifier,
+  degeneratePointsOf,
   degreesToRadians,
   formatEstimate,
   formatFixed,
   formatLarge,
+  formatLimit,
   formatReadout,
   formatRho,
   formatSmall,
   hook,
+  hookErrorDirection,
   hookRho,
   isDegenerate,
   isValue,
@@ -28,6 +34,7 @@ import {
   rho,
   seriesCoefficient,
   thetaSweep,
+  toFraction,
   valueOr,
   type Order,
 } from './compute';
@@ -429,6 +436,78 @@ describe('readouts', () => {
     const third = formatReadout(rTruncated(SAFE_THETA, ALPHA, 3));
     expect(second).toBe(first);
     expect(third).toBe(first);
+  });
+});
+
+describe('the bank', () => {
+  it('groups by mechanism, not by topic', () => {
+    const groups = bankByAmplifier();
+    expect(groups.map((group) => group.amplifier)).toEqual([
+      'cancellation',
+      'multiplication',
+    ]);
+    for (const group of groups) {
+      expect(group.entries.length).toBeGreaterThan(0);
+      for (const entry of group.entries) {
+        expect(entry.amplifiers).toContain(group.amplifier);
+      }
+    }
+  });
+
+  it('lists a question driven by both mechanisms under both', () => {
+    const both = BANK.filter((entry) => entry.amplifiers.length === 2);
+    expect(both.length).toBeGreaterThan(0);
+    const groups = bankByAmplifier();
+    for (const entry of both) {
+      const appearances = groups.filter((group) =>
+        group.entries.some((each) => each.id === entry.id),
+      );
+      expect(appearances).toHaveLength(2);
+    }
+  });
+
+  it('cites every question and links every paper', () => {
+    for (const entry of BANK) {
+      expect(entry.question).toMatch(/^\d{4} STEP [23], Q/);
+      expect(entry.paper).toMatch(/^https:\/\/step\.maths\.org\//);
+      expect(entry.why.length).toBeGreaterThan(20);
+    }
+  });
+});
+
+describe('measurement', () => {
+  it('locates where first-order expansion fails, for R and for its reciprocal', () => {
+    // The taught case...
+    expect(degeneratePointsOf('r')).toEqual([0, 180]);
+    // ...and the transfer item, which is deliberately not it.
+    expect(degeneratePointsOf('reciprocal')).toEqual([90, 270]);
+  });
+
+  it('gets the M1 limits right, computed rather than written down', () => {
+    const [first, second, third] = ORDER_ITEMS;
+    expect(first?.limit()).toBeCloseTo(1.5, 6);
+    expect(second?.limit()).toBeCloseTo(0.5, 6);
+    expect(third?.limit()).toBeCloseTo(1 / 24, 6);
+  });
+
+  it('writes those limits as fractions', () => {
+    expect(ORDER_ITEMS.map((item) => formatLimit(item.limit()))).toEqual([
+      '3/2',
+      '1/2',
+      '1/24',
+    ]);
+  });
+
+  it('finds the simplest fraction, or admits there is not one', () => {
+    expect(toFraction(0.5)).toEqual({ numerator: 1, denominator: 2 });
+    expect(toFraction(-1.5)).toEqual({ numerator: -3, denominator: 2 });
+    expect(toFraction(2)).toEqual({ numerator: 2, denominator: 1 });
+    expect(toFraction(Math.PI, 1e-12, 100)).toBeNull();
+  });
+
+  it('knows which way the error goes here', () => {
+    // Keeping nothing gives zero, and zero is below one half.
+    expect(hookErrorDirection()).toBe('too small');
   });
 });
 

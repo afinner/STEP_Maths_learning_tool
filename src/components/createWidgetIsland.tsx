@@ -25,10 +25,19 @@ export interface WidgetIslandProps extends WidgetHostProps {
  * the fix is to generate one route file per module and import its widget
  * directly; nothing in the module format has to change.
  */
-export function createWidgetIsland(widgets: Record<string, WidgetModule>) {
+export function createWidgetIsland(
+  widgets: Record<string, WidgetModule>,
+  /**
+   * Optional islands render nothing when the module has no such file. Used for
+   * closing.tsx, which most modules will not have: a module is four files, and
+   * anything past that is a module choosing to say more.
+   */
+  options: { optional?: boolean } = {},
+) {
   return function WidgetIsland({ widgetPath, ...host }: WidgetIslandProps) {
     const module = widgets[widgetPath];
     if (!module) {
+      if (options.optional) return null;
       throw new Error(
         `No widget found at ${widgetPath}. Every module needs a widget.tsx next to its index.md — see CONTRIBUTING.md.`,
       );

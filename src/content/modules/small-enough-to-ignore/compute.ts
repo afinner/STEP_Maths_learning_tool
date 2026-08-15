@@ -1,4 +1,4 @@
-import type { Amplifier } from '../../../lib/amplifiers';
+import { AMPLIFIERS, type Amplifier } from '../../../lib/amplifiers';
 
 /**
  * Module 01 — Small enough to ignore.
@@ -500,6 +500,245 @@ export function thetaSweep(
 }
 
 /* ------------------------------------------------------------------------- *
+ * The bank
+ * ------------------------------------------------------------------------- */
+
+export interface BankEntry {
+  id: string;
+  /** Where it sits in the run: worked through, to try, or the closer. */
+  slot: string;
+  /** Paper and question, as a citation. No question text appears anywhere. */
+  question: string;
+  amplifiers: readonly Amplifier[];
+  /** Why rho collapses, in one line. */
+  why: string;
+  paper: string;
+}
+
+/**
+ * Organised by amplifier, never by topic.
+ *
+ * A topic taxonomy — surds, trigonometry, series, binomial, probability —
+ * teaches surface pattern-matching, which is the habit this module exists to
+ * break. Sorting by mechanism is the part that transfers.
+ *
+ * Every entry is a citation and a paraphrase. No question text is reproduced;
+ * see the standing rule in CONTRIBUTING.md.
+ */
+export const BANK: readonly BankEntry[] = [
+  {
+    id: 'step3-2024-q2',
+    slot: 'Worked',
+    question: '2024 STEP 3, Q2(ii)(a)',
+    amplifiers: ['cancellation'],
+    why: 'The leading terms cancel exactly, and what is left under the root decides the answer. The cheapest example in the bank: start here.',
+    paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
+  },
+  {
+    id: 'step3-2022-q6',
+    slot: 'Worked',
+    question: '2022 STEP 3, Q6',
+    amplifiers: ['cancellation'],
+    why: 'The leading coefficient vanishes at the one point the question asks about — the witness worked through above.',
+    paper: 'https://step.maths.org/sites/default/files/2023-06/2022STEP3Mock.pdf',
+  },
+  {
+    id: 'step3-2024-q11',
+    slot: 'Closer',
+    question: '2024 STEP 3, Q11(iii)–(iv)',
+    amplifiers: ['cancellation'],
+    why: 'The term you would discard is the entire answer. Simplify it away and the question evaporates.',
+    paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
+  },
+  {
+    id: 'step3-2023-q2',
+    slot: 'Try',
+    question: '2023 STEP 3, Q2(iv)',
+    amplifiers: ['cancellation', 'multiplication'],
+    why: 'Two different orders in one expression, because one term is amplified by k and another by k². Sketch the region first: the contradiction only lands if the picture is yours.',
+    paper: 'https://step.maths.org/sites/default/files/2025-02/2023STEP3Mock.pdf',
+  },
+  {
+    id: 'step2-2021-q6',
+    slot: 'Try',
+    question: '2021 STEP 2, Q6(iii)–(iv)',
+    amplifiers: ['cancellation', 'multiplication'],
+    why: 'A ratio that tends to 1/(1 − cos α), which is order one rather than small.',
+    paper: 'https://step.maths.org/sites/default/files/2023-06/STEP_2_2021_Mock_0.pdf',
+  },
+  {
+    id: 'step2-2024-q11',
+    slot: 'Try',
+    question: '2024 STEP 2, Q11(iv)',
+    amplifiers: ['multiplication'],
+    why: 'The expansion is in pk, not in p, so the approximation is excellent at one group size and nonsense at another. Find the size where it breaks.',
+    paper: 'https://step.maths.org/sites/default/files/2025-06/STEP2_2024_Mock.pdf',
+  },
+  {
+    id: 'step3-2024-q3',
+    slot: 'Stretch',
+    question: '2024 STEP 3, Q3',
+    amplifiers: ['multiplication'],
+    why: 'A threshold that naive limiting cannot see at all.',
+    paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
+  },
+];
+
+export interface BankGroup {
+  amplifier: Amplifier;
+  entries: readonly BankEntry[];
+}
+
+/**
+ * The bank grouped by mechanism. A question driven by both amplifiers appears
+ * under both, because it is an example of each.
+ */
+export function bankByAmplifier(bank: readonly BankEntry[] = BANK): BankGroup[] {
+  return AMPLIFIERS.map((amplifier) => ({
+    amplifier,
+    entries: bank.filter((entry) => entry.amplifiers.includes(amplifier)),
+  })).filter((group) => group.entries.length > 0);
+}
+
+/* ------------------------------------------------------------------------- *
+ * Measurement
+ * ------------------------------------------------------------------------- */
+
+/**
+ * The same ratio the other way up.
+ *
+ * The transfer item asks where first-order expansion fails for the reciprocal.
+ * The answer is deliberately not the one the module taught, so it is worked out
+ * here from the same machinery rather than written down: whichever part is on
+ * the bottom is the part whose leading coefficient has to survive.
+ */
+export function reciprocalTruncated(theta: number, alpha: number, order: Order): Estimate {
+  const numerator = truncatedPart('denominator', theta, alpha, order);
+  const denominator = truncatedPart('numerator', theta, alpha, order);
+  if (denominator === 0) {
+    return indeterminate(numerator === 0 ? 'nothing-retained' : 'retained-denominator-vanishes');
+  }
+  return estimate(numerator / denominator);
+}
+
+/** Where first-order expansion fails, in degrees over [0, 360). */
+export function degeneratePointsOf(
+  which: 'r' | 'reciprocal',
+  alpha: number = ALPHA,
+): number[] {
+  const evaluate = which === 'r' ? rTruncated : reciprocalTruncated;
+  const points: number[] = [];
+  for (let degrees = 0; degrees < 360; degrees += 1) {
+    if (!isValue(evaluate(degreesToRadians(degrees), alpha, 1))) points.push(degrees);
+  }
+  return points;
+}
+
+/**
+ * Truncating too early makes the answer too small here: the naive move keeps
+ * nothing, and nothing is below the true value. Read off rather than asserted,
+ * because the other direction is just as common — a truncation that leaves a
+ * confident wrong number that is too big.
+ */
+export function hookErrorDirection(): 'too big' | 'too small' {
+  return hook.naiveValue(1) < hook.limit ? 'too small' : 'too big';
+}
+
+export interface OrderItem {
+  id: string;
+  /** The limit, in plain text: the island does not typeset. */
+  text: string;
+  /** Computed stably, never written down. */
+  limit(): number;
+  /** How many orders past the leading one you have to keep. */
+  ordersPastLeading: number;
+  /** What makes it that many, once they have answered. */
+  because: string;
+}
+
+/**
+ * M1. Order prediction with no computation — the skill on its own, and immune
+ * to having seen the question before.
+ */
+export const ORDER_ITEMS: readonly OrderItem[] = [
+  {
+    id: 'root-x-squared-plus-3x',
+    text: 'lim (x → ∞) of √(x² + 3x) − x',
+    // Rearranged to 3x / (√(x² + 3x) + x): the subtraction loses its own answer.
+    limit: () => {
+      const x = 1e8;
+      return (3 * x) / (Math.sqrt(x * x + 3 * x) + x);
+    },
+    ordersPastLeading: 1,
+    because: 'The x terms cancel, so the answer sits in the next one.',
+  },
+  {
+    id: 'tan-minus-sin',
+    text: 'lim (x → 0) of (tan x − sin x) / x³',
+    limit: () => {
+      const x = 1e-3;
+      return (Math.tan(x) - Math.sin(x)) / (x * x * x);
+    },
+    ordersPastLeading: 2,
+    because: 'Both expansions agree to first order, and the x³ terms are the first to differ.',
+  },
+  {
+    id: 'cos-quartic',
+    text: 'lim (n → ∞) of n⁴(cos(1/n) − 1 + 1/(2n²))',
+    limit: () => {
+      const n = 100;
+      return Math.pow(n, 4) * (Math.cos(1 / n) - 1 + 1 / (2 * n * n));
+    },
+    ordersPastLeading: 3,
+    because: 'Two terms of the cosine are subtracted away by hand; the third survives.',
+  },
+];
+
+/** How many orders past leading the learner says are needed. Whole numbers only. */
+export function parseOrderAnswer(raw: string): number | null {
+  const text = raw.trim();
+  return /^\d+$/.test(text) ? Number(text) : null;
+}
+
+/**
+ * The simplest fraction within tolerance of a value, by continued fractions.
+ * Limits computed numerically are far more legible written as 1/24 than as
+ * 0.041666, and the fraction is derived rather than typed beside it.
+ */
+export function toFraction(
+  value: number,
+  tolerance = 1e-4,
+  maxDenominator = 1000,
+): { numerator: number; denominator: number } | null {
+  const sign = value < 0 ? -1 : 1;
+  const magnitude = Math.abs(value);
+
+  let lowerN = 0;
+  let lowerD = 1;
+  let upperN = 1;
+  let upperD = 0;
+
+  for (let guard = 0; guard < 64; guard += 1) {
+    const mediantN = lowerN + upperN;
+    const mediantD = lowerD + upperD;
+    if (mediantD > maxDenominator) return null;
+
+    const mediant = mediantN / mediantD;
+    if (Math.abs(mediant - magnitude) < tolerance) {
+      return { numerator: sign * mediantN, denominator: mediantD };
+    }
+    if (mediant < magnitude) {
+      lowerN = mediantN;
+      lowerD = mediantD;
+    } else {
+      upperN = mediantN;
+      upperD = mediantD;
+    }
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------------- *
  * Display
  * ------------------------------------------------------------------------- */
 
@@ -567,6 +806,14 @@ export function formatEstimate(e: Estimate, decimals: number): string {
 /** The live readout beside the controls, where the value may be running away. */
 export function formatReadout(e: Estimate): string {
   return isValue(e) ? formatLarge(e.value) : INDETERMINATE_LABEL;
+}
+
+/** A limit written the way it would be written by hand, where that is possible. */
+export function formatLimit(value: number): string {
+  const fraction = toFraction(value);
+  if (!fraction) return formatFixed(value, 4);
+  if (fraction.denominator === 1) return String(fraction.numerator);
+  return `${fraction.numerator}/${fraction.denominator}`;
 }
 
 /** rho, which is unbounded whenever the truncation discards nothing at all. */

@@ -39,7 +39,10 @@ spec — one directory, four files, no other changes.
 | `src/fixtures/<id>/` | The verification harness. Validated on every build, never published. |
 | `src/lib/collections.ts` | Which modules are published, and in what order. Drafts are excluded here. |
 | `src/layouts/ModuleLayout.astro` | The six beats, in fixed order, for every module. |
-| `src/components/ModuleShell.tsx` | Prediction gate, parameter state, hypothesis ledger. |
+| `src/components/ModuleShell.tsx` | Commit gate, parameter state, hypothesis ledger. |
+| `src/components/commit/` | The commit gate as a pure reducer, plus its UI. |
+| `src/components/measure/` | Auto-marked measurement items. |
+| `src/lib/events.ts` | Learner-event shapes and the in-memory log. No persistence. |
 | `src/components/charts/` | Line chart, number line, running value. Built on d3-scale and d3-shape. |
 | `src/styles/tokens.css` | Every colour, size and spacing value in the site. |
 

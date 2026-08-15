@@ -10,6 +10,8 @@ src/content/modules/<module-id>/
   widget.tsx       the interactive island
   compute.ts       pure functions — no DOM, no randomness without a seed
   compute.test.ts  tests for the decisive quantity
+
+  closing.tsx      optional: anything the module adds after the six beats
 ```
 
 `<module-id>` is kebab-case and must equal the `id` in the frontmatter. It
@@ -162,6 +164,27 @@ export default function Widget(props: WidgetHostProps) {
 ledger. It renders the **Break** beat itself, because clicking a hypothesis has
 to move the widget above it — that shared state is why the widget and the ledger
 are one island.
+
+### Beyond the six beats
+
+A module that wants to say more after the Bank beat — a bank of questions to
+work, items that measure whether the mechanism landed — adds a `closing.tsx`
+exporting a default component. It renders after the six beats and cannot
+reorder them. Most modules will not have one.
+
+Two shared pieces support it:
+
+- `src/components/measure/MeasureItem.tsx` — one auto-marked item, taking a
+  number, a choice or a multiple selection. It emits the `measure` event. The
+  answer key lives in `compute.ts`, never in the component, so the marking is
+  covered by the module's own tests.
+- `src/lib/events.ts` — the event shapes. `commitFor()` and `revealFor()` read
+  back what the learner committed to earlier on the page, which is what a
+  calibration read-back is made of. Nothing is persisted; a sink registers with
+  `subscribe()` and no component changes.
+
+Do not time anything. These modules argue for pausing before you simplify, and
+measuring speed would contradict the content.
 
 ### Charts
 
