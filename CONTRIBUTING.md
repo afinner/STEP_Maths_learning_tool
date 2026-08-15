@@ -20,6 +20,32 @@ in miniature and is kept working by the same tests.
 
 ---
 
+## Standing rule: examination copyright
+
+**No examination question text appears verbatim anywhere in this repository.**
+STEP papers are the copyright of UCLES/OCR, and this applies without exception
+to:
+
+- module prose and frontmatter,
+- code comments,
+- test fixtures, test names and assertion messages,
+- commit messages.
+
+Every question a module draws on is **paraphrased into that module's own
+framing** and cited by reference. Put the citation in `provenance` — paper, year
+and question number, with a link to the official paper where one exists — and
+name the mathematical situation rather than quoting the setup.
+
+The rule is about the words, not the mathematics: results, standard identities
+and the reasoning are not anyone's copyright, and a module is free to work
+through them in its own voice. If a paraphrase is drifting close enough to the
+original that the wording matters, that is the signal to change the framing, not
+to shorten the quote.
+
+The same applies to any other examination board's material.
+
+---
+
 ## 1. `index.md`
 
 ### Frontmatter

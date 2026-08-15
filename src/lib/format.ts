@@ -9,7 +9,11 @@ export function renderMath(tex: string, display = false): string {
   return katex.renderToString(tex, {
     displayMode: display,
     throwOnError: false,
-    output: 'html',
+    // htmlAndMathml, KaTeX's default: the visual HTML carries a MathML
+    // annotation beside it, which is what a screen reader reads. Rendering
+    // 'html' alone is smaller and silently inaccessible — the symbol comes out
+    // as a stream of unrelated glyphs.
+    output: 'htmlAndMathml',
     strict: 'ignore',
   });
 }
