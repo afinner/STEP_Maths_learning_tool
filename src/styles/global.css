@@ -511,6 +511,57 @@ kbd {
   color: var(--break);
 }
 
+/* ---- Data tables -------------------------------------------------------- */
+/* Every break in a module is a table: the numbers do the work and the prose
+   comes after. Real tables, with real headers, so they read correctly aloud. */
+.data-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table caption {
+  text-align: left;
+  font-size: var(--size-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-bottom: var(--space-3);
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+
+.data-table thead th {
+  font-size: var(--size-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: var(--weight-medium);
+  border-bottom-color: var(--rule-strong);
+}
+
+.data-table tbody th {
+  font-weight: var(--weight-normal);
+  color: var(--ink-muted);
+}
+
+.data-table .numeric {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.data-table tr:last-child th,
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
 /* ---- Hypothesis ledger -------------------------------------------------- */
 .ledger {
   list-style: none;
