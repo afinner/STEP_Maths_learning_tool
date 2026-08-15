@@ -15,7 +15,7 @@ import type { Confidence } from '../../lib/events';
  *   - once committed, nothing can change the answer.
  */
 
-export type CommitMode = 'acknowledge' | 'numeric-with-confidence';
+export type CommitMode = 'acknowledge' | 'numeric-with-confidence' | 'choice';
 
 export interface CommitRecord {
   /** Exactly what the learner typed, kept verbatim for reading back to them. */
@@ -35,7 +35,9 @@ export type CommitAction =
   | { type: 'draft'; value: string }
   | { type: 'submit' }
   | { type: 'confidence'; confidence: Confidence; t: number }
-  | { type: 'acknowledge'; t: number };
+  | { type: 'acknowledge'; t: number }
+  /** One of a fixed set of positions, committed by choosing it. */
+  | { type: 'choose'; option: string; t: number };
 
 export const initialCommitState: CommitState = { phase: 'asking', draft: '' };
 
@@ -93,6 +95,13 @@ export function commitReducer(state: CommitState, action: CommitAction): CommitS
       return {
         phase: 'committed',
         record: { response: 'acknowledged', value: null, confidence: null, t: action.t },
+      };
+
+    case 'choose':
+      if (state.phase !== 'asking') return state;
+      return {
+        phase: 'committed',
+        record: { response: action.option, value: null, confidence: null, t: action.t },
       };
   }
 }

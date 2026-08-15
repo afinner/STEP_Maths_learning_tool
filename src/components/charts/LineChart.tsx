@@ -21,6 +21,11 @@ export interface LineChartProps extends ChartFrame {
   bands?: readonly Band[];
   /** Horizontal reference lines, in y units — limits, bounds, targets. */
   rules?: readonly { at: number; label?: string; tone?: 'primary' | 'break' }[];
+  /**
+   * Vertical reference lines, in x units. Where the reader currently is, and
+   * where the interesting points are.
+   */
+  guides?: readonly { at: number; label?: string; tone?: 'primary' | 'break' }[];
 }
 
 function extent(values: readonly number[], positiveOnly: boolean): [number, number] {
@@ -48,6 +53,7 @@ export function LineChart({
   yDomain,
   bands = [],
   rules = [],
+  guides = [],
   width = 640,
   height = 340,
   xLabel,
@@ -141,6 +147,31 @@ export function LineChart({
                   fill={r.tone === 'break' ? 'var(--chart-2)' : 'var(--ink-faint)'}
                 >
                   {r.label}
+                </text>
+              ) : null}
+            </g>
+          ))}
+
+          {guides.map((g, i) => (
+            <g key={`guide-${i}`}>
+              <line
+                x1={x(g.at)}
+                x2={x(g.at)}
+                y1={0}
+                y2={innerHeight}
+                stroke={g.tone === 'break' ? 'var(--chart-2)' : 'var(--chart-axis)'}
+                strokeDasharray={g.tone === 'break' ? undefined : '3 3'}
+                strokeWidth={g.tone === 'break' ? 2 : 1}
+              />
+              {g.label ? (
+                <text
+                  className="tick-label"
+                  x={x(g.at)}
+                  y={-2}
+                  textAnchor="middle"
+                  fill={g.tone === 'break' ? 'var(--chart-2)' : 'var(--ink-faint)'}
+                >
+                  {g.label}
                 </text>
               ) : null}
             </g>

@@ -1,7 +1,16 @@
 import { useEffect, useState } from 'react';
 import { ModuleShell, type WidgetHostProps } from '../../../components/ModuleShell';
+import { InlineCommit } from '../../../components/commit/InlineCommit';
 import type { CommitRecord } from '../../../components/commit/commitFlow';
 import { CONFIDENCE_LABELS } from '../../../lib/events';
+import {
+  Confirmation,
+  Essence,
+  Reframe,
+  TruncationExplorer,
+  TwoColumns,
+  WitnessSetup,
+} from './beats';
 import {
   DEGENERATE_THETA,
   SAFE_THETA,
@@ -12,15 +21,15 @@ import {
 } from './compute';
 
 /**
- * Module 01 — beats 1 to 3.
+ * Module 01 — beats 1 to 5.
  *
- * Beat 1 asks. Beat 2 takes the commitment. Beat 3 shows the numbers, and only
- * then the reader's own answer beside them. The gate is ModuleShell's, so the
- * ordering is enforced by a reducer rather than by the arrangement of this file.
+ * Beat 1 asks, beat 2 takes the commitment, beat 3 shows the numbers. Beat 4
+ * names the mechanism on the simplest case there is, and beat 5 runs the same
+ * move against a witness where it is right in one place and useless in another.
  *
- * Beat 4 and the truncation-order slider arrive in the next stage; the
- * parameters they will need are already here, since the hypothesis ledger sets
- * them.
+ * The gates are reducers, not conditional rendering, so the order cannot be
+ * short-circuited by rearranging this file. Beat 5f — the epicycloid — is a
+ * separate stage and may be cut.
  */
 
 export interface Params {
@@ -32,15 +41,15 @@ export interface Params {
 const initial: Params = {
   theta: SAFE_THETA,
   order: 1,
-  n: 1_000_000,
+  n: 100,
 };
 
 export const presets: Record<string, Params> = {
   // The denominator's first-order term is absent, not small.
   'leading-term-survives': { ...initial, theta: DEGENERATE_THETA },
-  // Keep only O(1) and both series retain nothing at all.
+  // Keep only O(1): both series retain nothing at all, and n - n is the same move.
   'kept-terms-do-not-cancel': { ...initial, order: 0 },
-  // As far out as the table goes, the dropped term is still exactly one half.
+  // Push n out to a million: the dropped term shrinks, the product does not.
   'dropped-term-is-not-amplified': { ...initial, n: 1_000_000 },
 };
 
@@ -135,21 +144,61 @@ export default function SmallEnoughToIgnoreWidget(props: WidgetHostProps) {
         target: hook.limit,
       }}
     >
-      {(_params, _setParams, record) => <BeatsOneToThree record={record} />}
+      {(params, setParams, record) => (
+        <Beats
+          record={record}
+          params={params}
+          onChange={(patch) => setParams(patch as Partial<Params>)}
+        />
+      )}
     </ModuleShell>
   );
 }
 
-function BeatsOneToThree({ record }: { record: CommitRecord }) {
+function Beats({
+  record,
+  params,
+  onChange,
+}: {
+  record: CommitRecord;
+  params: Params;
+  onChange: (patch: Partial<Params>) => void;
+}) {
   const readbackArrived = useAfterABeat();
 
   return (
     <>
       <HookTable />
       {readbackArrived ? <Reveal record={record} /> : null}
-      <p className="visually-hidden" aria-live="polite">
-        {readbackArrived ? `The limit is ${formatFixed(hook.limit, 1)}.` : ''}
-      </p>
+
+      {readbackArrived ? (
+        <>
+          <Essence n={params.n} />
+
+          <WitnessSetup />
+
+          <InlineCommit
+            beat={5}
+            promptId="drop-alpha-squared"
+            mode="choice"
+            prompt="The α² terms are much smaller than the α terms. Can we drop them?"
+            options={['Yes, always', 'No, never', 'Depends — on what?']}
+          >
+            {() => (
+              <>
+                <TwoColumns />
+                <TruncationExplorer
+                  theta={params.theta}
+                  order={params.order}
+                  onChange={onChange}
+                />
+                <Reframe />
+                <Confirmation />
+              </>
+            )}
+          </InlineCommit>
+        </>
+      ) : null}
     </>
   );
 }

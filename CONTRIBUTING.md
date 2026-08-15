@@ -178,8 +178,13 @@ keyboard-accessible without effort; keep it that way.
 
 ### Styling
 
+**Never apply `text-transform: uppercase` to anything that can contain a
+variable** — a label, a caption, an axis title, a table header. Uppercasing
+turns ρ into Ρ and O(α) into O(Α), which are different symbols. Capitals are for
+words: beat labels, section eyebrows, the wordmark.
+
 Use the existing class names — `.controls`, `.control`, `.widget-readout`,
-`.button` — from `src/styles/global.css`. If you need a new colour or spacing
+`.button`, `.data-table`, `.beat-panel` — from `src/styles/global.css`. If you need a new colour or spacing
 value, add a token to `src/styles/tokens.css`. No literal colours or pixel
 values in components: replacing that one file must be enough to restyle the
 site.

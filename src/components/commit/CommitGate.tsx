@@ -15,6 +15,8 @@ export interface CommitGateProps {
   prompt: string;
   /** Sits under the prompt: what kind of answer is wanted, and how to give it. */
   hint?: string;
+  /** For `choice` mode: the positions on offer. Choosing one is the commitment. */
+  options?: readonly string[];
   /** Fired once, when the learner commits. */
   onCommit: (record: CommitRecord) => void;
   children: (record: CommitRecord) => ReactNode;
@@ -30,7 +32,14 @@ const CONFIDENCES: readonly Confidence[] = ['guessing', 'fairly-sure', 'certain'
  * point rather than an inconvenience. Nothing is stored anywhere; the record
  * lives as long as the page does.
  */
-export function CommitGate({ mode, prompt, hint, onCommit, children }: CommitGateProps) {
+export function CommitGate({
+  mode,
+  prompt,
+  hint,
+  options = [],
+  onCommit,
+  children,
+}: CommitGateProps) {
   const [state, dispatch] = useReducer(commitReducer, initialCommitState);
   const inputId = useId();
 
@@ -55,6 +64,29 @@ export function CommitGate({ mode, prompt, hint, onCommit, children }: CommitGat
     commit({ type: 'confidence', confidence, t: Date.now() });
 
   const acknowledge = () => commit({ type: 'acknowledge', t: Date.now() });
+
+  const choose = (option: string) => commit({ type: 'choose', option, t: Date.now() });
+
+  if (mode === 'choice') {
+    return (
+      <div className="gate">
+        <p>{prompt}</p>
+        {hint ? <p className="gate-hint">{hint}</p> : null}
+        <div className="gate-actions" role="group" aria-label={prompt}>
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className="button button-quiet"
+              onClick={() => choose(option)}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (mode === 'acknowledge') {
     return (

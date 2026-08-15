@@ -538,11 +538,11 @@ kbd {
   border-top: 1px solid var(--rule);
 }
 
+/* Readout labels carry symbols — see the note on .data-table caption. */
 .widget-readout .term {
   display: block;
   font-size: var(--size-xs);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--ink-faint);
 }
 
@@ -565,6 +565,12 @@ kbd {
   color: var(--break);
 }
 
+/* Not a number: a different kind of state, and the only red on the page. */
+.widget-readout .value-indeterminate {
+  color: var(--indeterminate);
+  font-weight: var(--weight-medium);
+}
+
 /* ---- Data tables -------------------------------------------------------- */
 /* Every break in a module is a table: the numbers do the work and the prose
    comes after. Real tables, with real headers, so they read correctly aloud. */
@@ -576,11 +582,13 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
+/* No text-transform here, or anywhere a variable can appear: uppercasing turns
+   rho into Rho and O(alpha) into O(Alpha), which are different symbols. Small
+   caps are for words. */
 .data-table caption {
   text-align: left;
   font-size: var(--size-xs);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--ink-faint);
   padding-bottom: var(--space-3);
 }
@@ -615,6 +623,118 @@ kbd {
 .data-table tr:last-child th,
 .data-table tr:last-child td {
   border-bottom: none;
+}
+
+.data-table tr.is-current th,
+.data-table tr.is-current td {
+  background: var(--accent-wash);
+  font-weight: var(--weight-medium);
+}
+
+/* ---- Beat panels -------------------------------------------------------- */
+/* One idea per panel: a heading, the numbers, then as little prose as the idea
+   can be made to take. */
+.beat-panel {
+  display: grid;
+  gap: var(--space-4);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+}
+
+.panel-heading {
+  font-family: var(--font-ui);
+  font-size: var(--size-lg);
+}
+
+.panel-note {
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  color: var(--ink-muted);
+  max-width: var(--measure);
+}
+
+/* A line the reader is meant to carry away, or a step of working set apart. */
+.prose .statement {
+  font-size: var(--size-lg);
+  line-height: 1.4;
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--accent);
+}
+
+.amplifiers {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  margin: 0;
+}
+
+.amplifiers dt {
+  font-family: var(--font-ui);
+  font-size: var(--size-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--break);
+  margin-bottom: var(--space-1);
+}
+
+.amplifiers dd {
+  margin: 0;
+  font-size: var(--size-sm);
+  color: var(--ink-muted);
+}
+
+/* ---- Two evaluations, side by side -------------------------------------- */
+.columns {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.witness-column {
+  border-left: 3px solid var(--rule-strong);
+  padding-left: var(--space-4);
+}
+
+.witness-column.witness-primary {
+  border-left-color: var(--accent);
+}
+
+.witness-column.witness-break {
+  border-left-color: var(--break);
+}
+
+.witness-verdict {
+  margin-top: var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  color: var(--ink-muted);
+}
+
+.witness-break .witness-verdict {
+  color: var(--break);
+}
+
+/* ---- Confirmation (collapsed by default) -------------------------------- */
+/* Sits after the order argument and never in place of it: the order argument is
+   the transferable skill, the closed form is only reassurance. */
+.confirmation {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  background: var(--paper-sunken);
+}
+
+.confirmation summary {
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  font-weight: var(--weight-medium);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.confirmation[open] summary {
+  margin-bottom: var(--space-4);
 }
 
 /* ---- Hypothesis ledger -------------------------------------------------- */

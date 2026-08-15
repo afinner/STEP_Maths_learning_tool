@@ -1,22 +1,33 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ALPHA,
   DEGENERATE_THETA,
   HOOK_TABLE_N,
   ORDERS,
   SAFE_THETA,
+  THETA_MAX_DEGREES,
+  THETA_MIN_DEGREES,
   WITNESS_ALPHAS,
+  degreesToRadians,
   formatEstimate,
   formatFixed,
+  formatLarge,
+  formatReadout,
+  formatRho,
+  formatSmall,
   hook,
   hookRho,
   isDegenerate,
   isValue,
+  indeterminate as indeterminateOf,
   nearestDegenerateTheta,
   rExact,
   rFromDefinition,
   rTruncated,
+  radiansToDegrees,
   rho,
   seriesCoefficient,
+  thetaSweep,
   valueOr,
   type Order,
 } from './compute';
@@ -325,6 +336,99 @@ describe('rho', () => {
       expect(report.dropped).toBeCloseTo(0.5, 12);
       expect(report.rho).toBe(0);
     }
+  });
+});
+
+describe('driving theta through the degenerate point', () => {
+  it('puts both degenerate points and both interesting angles on the grid', () => {
+    for (const degrees of [0, 180, 60, 90]) {
+      expect(Number.isInteger(degrees)).toBe(true);
+      expect(degrees).toBeGreaterThanOrEqual(THETA_MIN_DEGREES);
+      expect(degrees).toBeLessThanOrEqual(THETA_MAX_DEGREES);
+    }
+    expect(degreesToRadians(0)).toBe(0);
+    expect(degreesToRadians(60)).toBeCloseTo(SAFE_THETA, 12);
+    expect(radiansToDegrees(SAFE_THETA)).toBe(60);
+  });
+
+  it('is indeterminate at exactly the two degenerate points, and nowhere else', () => {
+    const sweep = thetaSweep(1);
+    const indeterminate = sweep.filter((s) => !isValue(s.value)).map((s) => s.degrees);
+    expect(indeterminate).toEqual([0, 180]);
+  });
+
+  /**
+   * The transition the module is built around: the value has to run away on the
+   * approach and then stop being a value, rather than jumping from something
+   * ordinary to nothing.
+   */
+  it('diverges on the approach from both sides', () => {
+    const at = (degrees: number) =>
+      Math.abs(valueOr(rTruncated(degreesToRadians(degrees), ALPHA, 1), NaN));
+
+    for (const side of [1, -1]) {
+      expect(at(side * 10)).toBeGreaterThan(at(side * 30));
+      expect(at(side * 3)).toBeGreaterThan(at(side * 10));
+      expect(at(side * 1)).toBeGreaterThan(at(side * 3));
+      expect(at(side * 1)).toBeGreaterThan(50);
+    }
+  });
+
+  it('recovers immediately either side of the point at second order', () => {
+    const sweep = thetaSweep(2);
+    expect(sweep.filter((s) => !isValue(s.value))).toHaveLength(0);
+    // At the point itself, second order gives the -2/alpha the module promises.
+    const atZero = sweep.find((s) => s.degrees === 0);
+    expect(valueOr(atZero?.value ?? indeterminateOf('divergent'), NaN)).toBeCloseTo(-2 / ALPHA, 6);
+  });
+
+  it('retains nothing anywhere at O(1)', () => {
+    expect(thetaSweep(0).every((s) => !isValue(s.value))).toBe(true);
+  });
+});
+
+describe('beat 4: where the answer went', () => {
+  it('throws away five ten-millionths at a million', () => {
+    expect(hook.rawDroppedTerm(1_000_000)).toBeCloseTo(5e-7, 15);
+    expect(formatSmall(hook.rawDroppedTerm(1_000_000))).toBe('5.0 × 10\u207b\u2077');
+  });
+
+  it('multiplies it back up to the answer, at every n', () => {
+    for (const n of HOOK_TABLE_N) {
+      expect(hook.droppedTerm(n)).toBeCloseTo(hook.limit, 12);
+      expect(hook.rawDroppedTerm(n) * n).toBeCloseTo(hook.limit, 12);
+    }
+  });
+
+  it('keeps nothing: what survived the cancellation is exactly zero', () => {
+    for (const n of HOOK_TABLE_N) expect(hook.naiveValue(n)).toBe(0);
+  });
+});
+
+describe('readouts', () => {
+  it('says how big a runaway value is rather than printing meaningless digits', () => {
+    expect(formatLarge(-0.5773)).toBe('-0.577');
+    expect(formatLarge(-2000)).toBe('-2000');
+    expect(formatLarge(-8.2e15)).toBe('-8.2 × 10\u00b9\u2075');
+  });
+
+  it('never renders a non-value as a number', () => {
+    expect(formatReadout(rTruncated(DEGENERATE_THETA, ALPHA, 1))).toBe('indeterminate');
+    expect(formatReadout(rTruncated(SAFE_THETA, ALPHA, 1))).toBe('-0.577');
+  });
+
+  it('reports an unbounded rho as unbounded', () => {
+    expect(formatRho(Number.POSITIVE_INFINITY)).toBe('unbounded');
+    expect(formatRho(0)).toBe('0');
+  });
+
+  it('shows the same value either side of the boundary at fixed order', () => {
+    // The claim in section 5: at pi/3 the value stops moving once alpha is kept.
+    const first = formatReadout(rTruncated(SAFE_THETA, ALPHA, 1));
+    const second = formatReadout(rTruncated(SAFE_THETA, ALPHA, 2));
+    const third = formatReadout(rTruncated(SAFE_THETA, ALPHA, 3));
+    expect(second).toBe(first);
+    expect(third).toBe(first);
   });
 });
 

@@ -10,6 +10,7 @@ import {
   type CommitAction,
   type CommitState,
 } from '../src/components/commit/commitFlow';
+import { InlineCommit } from '../src/components/commit/InlineCommit';
 import { commitFor, commits, emit, history, resetEvents, subscribe } from '../src/lib/events';
 import ModuleOneWidget from '../src/content/modules/small-enough-to-ignore/widget';
 import { hook, hookTable } from '../src/content/modules/small-enough-to-ignore/compute';
@@ -100,6 +101,45 @@ describe('the reveal is unreachable before a commit', () => {
       phase: 'committed',
       record: { response: '0', value: 0, confidence: 'guessing', t: 2 },
     });
+  });
+});
+
+describe('the second commit, part-way down the module', () => {
+  beforeEach(() => resetEvents());
+
+  it('holds back everything behind it until a position is chosen', () => {
+    const html = renderToStaticMarkup(
+      <InlineCommit
+        beat={5}
+        promptId="drop-alpha-squared"
+        mode="choice"
+        prompt="Can we drop them?"
+        options={['Yes, always', 'No, never', 'Depends — on what?']}
+      >
+        {() => <p>the two columns</p>}
+      </InlineCommit>,
+    );
+
+    expect(html).toContain('Can we drop them?');
+    expect(html).toContain('Depends');
+    expect(html).not.toContain('the two columns');
+  });
+
+  it('treats choosing as the commitment', () => {
+    const chosen = commitReducer(initialCommitState, {
+      type: 'choose',
+      option: 'No, never',
+      t: 7,
+    });
+    expect(chosen).toEqual({
+      phase: 'committed',
+      record: { response: 'No, never', value: null, confidence: null, t: 7 },
+    });
+
+    // And it cannot be revised afterwards, like every other commitment.
+    expect(commitReducer(chosen, { type: 'choose', option: 'Yes, always', t: 8 })).toBe(
+      chosen,
+    );
   });
 });
 

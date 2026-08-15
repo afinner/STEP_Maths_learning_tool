@@ -28,6 +28,11 @@
   --break: #a4501d;
   --break-wash: #fbf0e7;
 
+  /* Reserved for one thing: a quantity that is not a value at all. It has to
+     read as a different kind of state, not a worse number, so it is the only
+     true red in the palette. */
+  --indeterminate: #b3261e;
+
   /* Repair beat: the corrected model. */
   --repair: #2f6b4f;
   --repair-wash: #e9f2ed;
@@ -108,6 +113,8 @@
 
     --break: #e39a63;
     --break-wash: #2a1f17;
+
+    --indeterminate: #f08a80;
 
     --repair: #7dbd9c;
     --repair-wash: #16241d;

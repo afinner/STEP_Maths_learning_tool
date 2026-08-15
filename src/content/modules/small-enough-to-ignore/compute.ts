@@ -1,3 +1,5 @@
+import type { Amplifier } from '../../../lib/amplifiers';
+
 /**
  * Module 01 — Small enough to ignore.
  *
@@ -54,13 +56,11 @@ export function valueOr(e: Estimate, fallback: number): number {
  * Amplifiers: why a dropped term comes back
  * ------------------------------------------------------------------------- */
 
-/** The bank is organised by these, not by topic. */
-export type Amplifier = 'cancellation' | 'multiplication';
-
-export const AMPLIFIER_NAMES: Record<Amplifier, string> = {
-  cancellation: 'Cancellation',
-  multiplication: 'Multiplication',
-};
+/**
+ * The vocabulary is shared across modules rather than owned by this one, since
+ * the bank sorts by mechanism and later modules sort into the same drawers.
+ */
+export type { Amplifier };
 
 /* ------------------------------------------------------------------------- *
  * The hook
@@ -87,7 +87,9 @@ export interface HookExpression {
   value(n: number): number;
   /** What the naive move leaves behind, after the terms you kept cancel. */
   naiveValue(n: number): number;
-  /** The leading term the naive move discards, after whatever multiplies it. */
+  /** The leading term the naive move discards, before anything amplifies it. */
+  rawDroppedTerm(n: number): number;
+  /** The same term, after whatever multiplies it. This is where the answer went. */
   droppedTerm(n: number): number;
   /** Partial sum of the expansion, keeping `terms` terms. */
   expansion(n: number, terms: number): number;
@@ -114,7 +116,9 @@ const rootHook: HookExpression = {
   value: (n) => n / (Math.sqrt(n * n + 1) + n),
   // sqrt(n^2+1) rounded down to n: what you keep is n - n.
   naiveValue: (n) => n * (n - n),
-  // The first discarded term of the root, 1/(2n), multiplied by the n outside.
+  // Rounding the root down to n throws away 1/(2n) ...
+  rawDroppedTerm: (n) => binomialCoefficient(0.5, 1) / n,
+  // ... and then the n outside multiplies it straight back up to the answer.
   droppedTerm: (n) => n * (binomialCoefficient(0.5, 1) / n),
   expansion: (n, terms) => {
     let total = 0;
@@ -140,6 +144,7 @@ const compoundHook: HookExpression = {
   value: (n) => Math.pow(1 + 1 / n, n),
   // 1/n rounded down to 0: what you keep is 1^n.
   naiveValue: (n) => Math.pow(1 + 0 * n, n),
+  rawDroppedTerm: (n) => 1 / n,
   droppedTerm: (n) => Math.pow(1 + 1 / n, n) - Math.pow(1 + 0 * n, n),
   expansion: (n, terms) => {
     // e(1 - 1/(2n) + 11/(24n^2) - ...)
@@ -187,12 +192,19 @@ export const MAX_ORDER = 3;
 export type Order = 0 | 1 | 2 | 3;
 export const ORDERS: readonly Order[] = [0, 1, 2, 3];
 
-/** How the slider labels each stop. */
+/** How the slider labels each stop, in KaTeX and in plain readable text. */
 export const ORDER_LATEX: Readonly<Record<Order, string>> = {
   0: 'O(1)',
   1: 'O(\\alpha)',
   2: 'O(\\alpha^{2})',
   3: 'O(\\alpha^{3})',
+};
+
+export const ORDER_LABELS: Readonly<Record<Order, string>> = {
+  0: 'O(1)',
+  1: 'O(α)',
+  2: 'O(α²)',
+  3: 'O(α³)',
 };
 
 export type Part = 'numerator' | 'denominator';
@@ -437,6 +449,57 @@ export function hookRho(n: number): RhoPart {
 }
 
 /* ------------------------------------------------------------------------- *
+ * Driving theta through the degenerate point
+ * ------------------------------------------------------------------------- */
+
+/**
+ * The theta control works in whole degrees.
+ *
+ * This is the detent. A slider carrying radians as floats lands on 1e-17 rather
+ * than 0 and shows a huge finite number exactly where the module needs
+ * "indeterminate"; integers cannot miss. Degrees also put the two degenerate
+ * points (0 and 180) and both interesting angles (60 and 90) on the grid.
+ */
+export const THETA_MIN_DEGREES = -90;
+export const THETA_MAX_DEGREES = 270;
+export const THETA_STEP_DEGREES = 1;
+
+export function degreesToRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
+export function radiansToDegrees(radians: number): number {
+  return Math.round((radians * 180) / Math.PI);
+}
+
+export interface SweepSample {
+  degrees: number;
+  theta: number;
+  value: Estimate;
+}
+
+/**
+ * The truncated value across the whole range of theta, at a fixed order.
+ *
+ * Sweeping this at first order is the module's key interaction: the value grows
+ * without bound on the approach to theta = 0 and then stops being a value at
+ * all. Generated here rather than in the widget so the shape of that transition
+ * is testable.
+ */
+export function thetaSweep(
+  order: Order,
+  alpha: number = ALPHA,
+  step: number = THETA_STEP_DEGREES,
+): SweepSample[] {
+  const samples: SweepSample[] = [];
+  for (let degrees = THETA_MIN_DEGREES; degrees <= THETA_MAX_DEGREES; degrees += step) {
+    const theta = degreesToRadians(degrees);
+    samples.push({ degrees, theta, value: rTruncated(theta, alpha, order) });
+  }
+  return samples;
+}
+
+/* ------------------------------------------------------------------------- *
  * Display
  * ------------------------------------------------------------------------- */
 
@@ -445,9 +508,71 @@ export function formatFixed(value: number, decimals: number): string {
   return value.toFixed(decimals);
 }
 
+const SUPERSCRIPTS: Readonly<Record<string, string>> = {
+  '0': '\u2070',
+  '1': '\u00b9',
+  '2': '\u00b2',
+  '3': '\u00b3',
+  '4': '\u2074',
+  '5': '\u2075',
+  '6': '\u2076',
+  '7': '\u2077',
+  '8': '\u2078',
+  '9': '\u2079',
+  '-': '\u207b',
+};
+
+/** Exponents as real superscript characters: they read aloud correctly too. */
+export function superscript(exponent: number): string {
+  return String(exponent)
+    .split('')
+    .map((character) => SUPERSCRIPTS[character] ?? character)
+    .join('');
+}
+
+/**
+ * A magnitude the reader is meant to feel rather than read: five ten-millionths
+ * is a small number, and seeing how small is the point.
+ */
+export function formatSmall(value: number): string {
+  const magnitude = Math.abs(value);
+  if (magnitude === 0) return '0';
+  if (magnitude >= 1e-4) return value.toFixed(7).replace(/0+$/, '');
+  const exponent = Math.floor(Math.log10(magnitude));
+  const mantissa = value / Math.pow(10, exponent);
+  return `${formatFixed(mantissa, 1)} × 10${superscript(exponent)}`;
+}
+
+/**
+ * Values near a pole run away faster than a fixed-decimal column can hold. Past
+ * the point where the digits stop meaning anything, say the size instead.
+ */
+export function formatLarge(value: number, decimals: number = R_DECIMALS): string {
+  const magnitude = Math.abs(value);
+  if (magnitude >= 1e6) {
+    const exponent = Math.floor(Math.log10(magnitude));
+    const mantissa = formatFixed(magnitude / Math.pow(10, exponent), 1);
+    return `${value < 0 ? '-' : ''}${mantissa} × 10${superscript(exponent)}`;
+  }
+  return formatFixed(value, magnitude >= 1000 ? 0 : decimals);
+}
+
 /** What a reader sees in place of a value that does not exist. */
 export const INDETERMINATE_LABEL = 'indeterminate';
 
 export function formatEstimate(e: Estimate, decimals: number): string {
   return isValue(e) ? formatFixed(e.value, decimals) : INDETERMINATE_LABEL;
+}
+
+/** The live readout beside the controls, where the value may be running away. */
+export function formatReadout(e: Estimate): string {
+  return isValue(e) ? formatLarge(e.value) : INDETERMINATE_LABEL;
+}
+
+/** rho, which is unbounded whenever the truncation discards nothing at all. */
+export function formatRho(value: number): string {
+  if (!Number.isFinite(value)) return 'unbounded';
+  if (value === 0) return '0';
+  if (value >= 1000) return formatLarge(value, 0);
+  return formatFixed(value, value < 10 ? 2 : 0);
 }
