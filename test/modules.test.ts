@@ -92,7 +92,10 @@ describe.each(dirs)('$dir', ({ id, dir }) => {
 describe('schema strictness', () => {
   // The fixture is the reference instance: whatever it does, a real module may do.
   const valid = moduleSchema.parse(frontmatterOf('src/fixtures/fixture-module'));
-  const requiredFields = Object.keys(moduleSchema.shape);
+  // Everything except the fields that carry a default — `draft` is the only one.
+  const requiredFields = Object.entries(moduleSchema.shape)
+    .filter(([, field]) => !field.isOptional())
+    .map(([name]) => name);
 
   it.each(requiredFields)('rejects a module missing %s', (field) => {
     const broken: Record<string, unknown> = structuredClone({

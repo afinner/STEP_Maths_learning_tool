@@ -50,9 +50,9 @@ The same applies to any other examination board's material.
 
 ### Frontmatter
 
-Every field is required. A missing or malformed field fails `npm run build` —
-this is deliberate, and it is checked by a test, so it will not quietly stop
-being true. The schema is `src/schema.ts`, which is the authority if this
+Every field except `draft` is required. A missing or malformed field fails
+`npm run build` — this is deliberate, and it is checked by a test, so it will not
+quietly stop being true. The schema is `src/schema.ts`, which is the authority if this
 document and the code ever disagree.
 
 | Field | Type | What goes in it |
@@ -68,6 +68,7 @@ document and the code ever disagree.
 | `boundary` | string | One sentence: when the original move **is** valid. |
 | `provenance` | string | What prompted this: the specific paper, question, or lesson. |
 | `added` | date `YYYY-MM-DD` | Sorts the index. |
+| `draft` | boolean, optional | `true` while the module is being built. Omit it entirely once published. |
 
 ### Hypotheses
 
@@ -85,6 +86,16 @@ hypotheses:
 - `id` must have a matching entry in the widget's exported `presets`. A test
   fails if it does not, so a hypothesis can never become a button that does
   nothing.
+
+### Drafts
+
+A module that will take more than one sitting starts with `draft: true`. Drafts
+are validated by the schema and rendered by `npm run dev`, but the production
+build emits no page for them and the index does not list them, so nothing
+half-finished can reach the live site. Delete the line to publish.
+
+Use `npm run build:preview` to build drafts and fixtures into `dist/` when you
+want to check one in built form.
 
 ### Body
 

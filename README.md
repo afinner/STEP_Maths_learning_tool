@@ -13,16 +13,16 @@ is a reference, not a course: it is complete at any size, and it grows slowly.
 ```bash
 nvm use          # Node version is pinned in .nvmrc
 npm install
-npm run dev      # dev server, fixtures included
+npm run dev      # dev server, fixtures and drafts included
 npm test         # unit tests and the module contract
 npm run build    # production build — validates every module
 ```
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Dev server with fixture pages at `/fixtures/<id>/`. |
+| `npm run dev` | Dev server, including fixtures and draft modules. |
 | `npm run build` | Production build to `dist/`. Fails on any schema violation. |
-| `npm run build:fixtures` | Production build with fixture pages emitted, for checking them in built form. |
+| `npm run build:preview` | Production build with fixtures and drafts emitted, for checking them in built form. |
 | `npm run preview` | Serve `dist/` locally. |
 | `npm test` | Vitest: compute functions plus the per-module contract. |
 | `npm run check` | Astro/TypeScript diagnostics. |
@@ -37,6 +37,7 @@ spec — one directory, four files, no other changes.
 | `src/schema.ts` | The module schema. One Zod object, used by every collection. |
 | `src/content/modules/<id>/` | One module: `index.md`, `widget.tsx`, `compute.ts`, `compute.test.ts`. |
 | `src/fixtures/<id>/` | The verification harness. Validated on every build, never published. |
+| `src/lib/collections.ts` | Which modules are published, and in what order. Drafts are excluded here. |
 | `src/layouts/ModuleLayout.astro` | The six beats, in fixed order, for every module. |
 | `src/components/ModuleShell.tsx` | Prediction gate, parameter state, hypothesis ledger. |
 | `src/components/charts/` | Line chart, number line, running value. Built on d3-scale and d3-shape. |

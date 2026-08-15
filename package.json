@@ -7,9 +7,9 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "INCLUDE_FIXTURES=1 astro dev",
+    "dev": "INCLUDE_FIXTURES=1 INCLUDE_DRAFTS=1 astro dev",
     "build": "astro build",
-    "build:fixtures": "INCLUDE_FIXTURES=1 astro build",
+    "build:preview": "INCLUDE_FIXTURES=1 INCLUDE_DRAFTS=1 astro build",
     "preview": "astro preview",
     "check": "astro check",
     "test": "vitest run",

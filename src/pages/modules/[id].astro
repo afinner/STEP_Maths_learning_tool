@@ -2,13 +2,16 @@
 import { getCollection, render } from 'astro:content';
 import ModuleLayout from '../../layouts/ModuleLayout.astro';
 import ModuleWidgetIsland from '../../components/ModuleWidgetIsland';
+import { includeDrafts, publishedModules } from '../../lib/collections';
 
 /**
  * One route for every module, now and forever. Adding a module means adding a
  * directory under src/content/modules — nothing here changes.
  */
 export async function getStaticPaths() {
-  const modules = await getCollection('modules');
+  const modules = publishedModules(await getCollection('modules'), {
+    includeDrafts: includeDrafts(),
+  });
   return modules.map((entry) => ({ params: { id: entry.id }, props: { entry } }));
 }
 

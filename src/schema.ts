@@ -62,6 +62,12 @@ export const moduleSchema = z.object({
   /** What prompted this module: a specific paper, question, or lesson. */
   provenance: z.string().min(1),
   added: z.coerce.date(),
+  /**
+   * A module still being built. Validated and rendered in dev, excluded from the
+   * production build and the index. The only optional field in the schema:
+   * omitting it means published.
+   */
+  draft: z.boolean().default(false),
 });
 
 export type ModuleFrontmatter = z.infer<typeof moduleSchema>;

@@ -3,11 +3,11 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { modulePath } from '../lib/base';
 import { formatDate, isoDate } from '../lib/format';
+import { includeDrafts, publishedModules } from '../lib/collections';
 
-/** Newest first: the catalogue is a record of what has been worked out, in order. */
-const modules = (await getCollection('modules')).sort(
-  (a, b) => b.data.added.getTime() - a.data.added.getTime(),
-);
+const modules = publishedModules(await getCollection('modules'), {
+  includeDrafts: includeDrafts(),
+});
 ---
 
 <BaseLayout
