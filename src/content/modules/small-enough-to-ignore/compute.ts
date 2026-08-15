@@ -331,6 +331,22 @@ export const DEGENERATE_THETA = 0;
 /** The values of alpha shown in the side-by-side tables. */
 export const WITNESS_ALPHAS: readonly number[] = [0.1, 0.01, 0.001, 0.0001];
 
+/**
+ * The one alpha the interactive part of the module runs at.
+ *
+ * The slider has two controls, order and theta, so alpha has to be a constant —
+ * and which constant matters. The module's claim is that at theta = pi/3 the
+ * displayed value stops changing once first order is kept, but the first-order
+ * and second-order values differ by about 0.67 alpha, so that claim is only
+ * true on screen if alpha is small enough for the difference to fall below the
+ * displayed precision. At alpha = 0.001 and three decimals both read -0.577,
+ * and the degenerate point reads a satisfying -2000.000.
+ */
+export const ALPHA = 0.001;
+
+/** Decimal places for R on screen. Chosen with ALPHA; see above. */
+export const R_DECIMALS = 3;
+
 export interface WitnessSample {
   alpha: number;
   exact: Estimate;

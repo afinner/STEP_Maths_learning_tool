@@ -92,8 +92,12 @@ describe('module shell', () => {
     expect(html).toContain('unbounded');
   });
 
-  it('has an enabled button for every hypothesis with a preset', () => {
-    expect(html).not.toContain('disabled');
+  it('has a preset for every hypothesis, and waits for the commit to offer them', () => {
     expect(Object.keys(presets).sort()).toEqual(hypotheses.map((h) => h.id).sort());
+
+    // Driving the widget from the ledger would be a way around the commit, so
+    // the conditions are readable but not yet clickable.
+    expect((html.match(/disabled/g) ?? []).length).toBe(hypotheses.length);
+    expect(html).toContain('Answer the question above');
   });
 });

@@ -5,6 +5,12 @@ interface HypothesisLedgerProps {
   activeId: string | null;
   /** Ids the widget actually has a preset for. Others are shown, but inert. */
   wired: readonly string[];
+  /**
+   * Before the reader has committed to an answer. The conditions are worth
+   * reading either way, so they stay on the page — but driving the widget from
+   * here would be a way around the commit, so it waits.
+   */
+  locked?: boolean;
   onSelect: (id: string) => void;
   onClear: () => void;
 }
@@ -21,6 +27,7 @@ export function HypothesisLedger({
   hypotheses,
   activeId,
   wired,
+  locked = false,
   onSelect,
   onClear,
 }: HypothesisLedgerProps) {
@@ -28,7 +35,7 @@ export function HypothesisLedger({
     <>
       <ul className="ledger">
         {hypotheses.map((h) => {
-          const isWired = wired.includes(h.id);
+          const isWired = wired.includes(h.id) && !locked;
           const isActive = activeId === h.id;
           return (
             <li key={h.id}>
@@ -51,6 +58,9 @@ export function HypothesisLedger({
           );
         })}
       </ul>
+      {locked ? (
+        <p className="ledger-locked">Answer the question above and these come alive.</p>
+      ) : null}
       {activeId ? (
         <p className="gate-actions" style={{ marginTop: 'var(--space-4)' }}>
           <button type="button" className="button button-quiet" onClick={onClear}>

@@ -1,7 +1,14 @@
 import { useState, type ReactNode } from 'react';
 import type { Hypothesis } from '../schema';
+import { emit } from '../lib/events';
+import { CommitGate } from './commit/CommitGate';
+import {
+  deltaFromResponse,
+  isCorrect,
+  type CommitMode,
+  type CommitRecord,
+} from './commit/commitFlow';
 import { HypothesisLedger } from './HypothesisLedger';
-import { PredictionGate } from './PredictionGate';
 
 /**
  * Props the page template hands to every module widget. A widget takes these
@@ -13,6 +20,27 @@ export interface WidgetHostProps {
   predictionPrompt: string;
 }
 
+/**
+ * How the module takes the reader's commitment before showing them anything.
+ * Omitted, it is a single acknowledgement — enough for a module whose prediction
+ * has no numeric answer.
+ */
+export interface CommitConfig {
+  mode: CommitMode;
+  /** Which beat this commitment belongs to, for the event log. */
+  beat: number;
+  promptId: string;
+  hint?: string;
+  /** The value the answer is marked against, where there is one. */
+  target?: number;
+}
+
+const DEFAULT_COMMIT: CommitConfig = {
+  mode: 'acknowledge',
+  beat: 1,
+  promptId: 'prediction',
+};
+
 export interface ModuleShellProps<P extends object> extends WidgetHostProps {
   /** The well-behaved case: parameters for which the claim looks true. */
   initial: P;
@@ -22,8 +50,16 @@ export interface ModuleShellProps<P extends object> extends WidgetHostProps {
    * never quietly become a dead button.
    */
   presets: Readonly<Record<string, P>>;
-  /** The widget proper: given current parameters, draw. */
-  children: (params: P, setParams: (patch: Partial<P>) => void) => ReactNode;
+  commit?: CommitConfig;
+  /**
+   * The widget proper: given current parameters, draw. The commitment is passed
+   * back so a module can read the learner's own answer to them.
+   */
+  children: (
+    params: P,
+    setParams: (patch: Partial<P>) => void,
+    commit: CommitRecord,
+  ) => ReactNode;
 }
 
 /**
@@ -39,10 +75,11 @@ export function ModuleShell<P extends object>({
   predictionPrompt,
   initial,
   presets,
+  commit = DEFAULT_COMMIT,
   children,
 }: ModuleShellProps<P>) {
   const [params, setParamsState] = useState<P>(initial);
-  const [revealed, setRevealed] = useState(false);
+  const [record, setRecord] = useState<CommitRecord | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const setParams = (patch: Partial<P>) => {
@@ -59,7 +96,6 @@ export function ModuleShell<P extends object>({
     if (!preset) return;
     setParamsState(preset);
     setActiveId(id);
-    setRevealed(true);
   };
 
   const clearHypothesis = () => {
@@ -67,15 +103,44 @@ export function ModuleShell<P extends object>({
     setActiveId(null);
   };
 
+  /**
+   * One commitment, then the reveal. The events are emitted here rather than in
+   * the gate so that every module logs the same shapes without having to
+   * remember to.
+   */
+  const onCommit = (committed: CommitRecord) => {
+    setRecord(committed);
+    emit({
+      type: 'commit',
+      beat: commit.beat,
+      prompt_id: commit.promptId,
+      response: committed.response,
+      confidence: committed.confidence,
+      t: committed.t,
+    });
+    if (commit.target !== undefined) {
+      emit({
+        type: 'reveal',
+        beat: commit.beat,
+        prompt_id: commit.promptId,
+        correct: isCorrect(committed, commit.target),
+        delta_from_response: deltaFromResponse(committed, commit.target),
+      });
+    }
+  };
+
   return (
     <>
-      <PredictionGate
+      <CommitGate
+        mode={commit.mode}
         prompt={predictionPrompt}
-        revealed={revealed}
-        onReveal={() => setRevealed(true)}
+        {...(commit.hint !== undefined ? { hint: commit.hint } : {})}
+        onCommit={onCommit}
       >
-        <div className="widget">{children(params, setParams)}</div>
-      </PredictionGate>
+        {(committed) => (
+          <div className="widget">{children(params, setParams, committed)}</div>
+        )}
+      </CommitGate>
 
       <section className="beat beat-break" id="break" aria-labelledby="beat-break-label">
         <h2 className="beat-label" id="beat-break-label">
@@ -91,6 +156,7 @@ export function ModuleShell<P extends object>({
           hypotheses={hypotheses}
           activeId={activeId}
           wired={wired}
+          locked={record === null}
           onSelect={selectHypothesis}
           onClear={clearHypothesis}
         />
