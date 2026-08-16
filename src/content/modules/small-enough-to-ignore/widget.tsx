@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { ModuleShell, type WidgetHostProps } from '../../../components/ModuleShell';
 import { InlineCommit } from '../../../components/commit/InlineCommit';
 import type { CommitRecord } from '../../../components/commit/commitFlow';
@@ -17,7 +16,7 @@ import {
   formatFixed,
   hook,
   hookTable,
-  type Order,
+  type Params,
 } from './compute';
 
 /**
@@ -27,16 +26,9 @@ import {
  * names the mechanism on the simplest case there is, and beat 5 runs the same
  * move against a witness where it is right in one place and useless in another.
  *
- * The gates are reducers, not conditional rendering, so the order cannot be
- * short-circuited by rearranging this file. Beat 5f — the epicycloid — is a
- * separate stage and may be cut.
+ * The gates preserve both commitments before their corresponding evidence is
+ * revealed; the learner cannot short-circuit the sequence by using a control.
  */
-
-export interface Params {
-  theta: number;
-  order: Order;
-  n: number;
-}
 
 const initial: Params = {
   theta: SAFE_THETA,
@@ -46,36 +38,10 @@ const initial: Params = {
 
 export const presets: Record<string, Params> = {
   // The denominator's first-order term is absent, not small.
-  'leading-term-survives': { ...initial, theta: DEGENERATE_THETA },
-  // Keep only O(1): both series retain nothing at all, and n - n is the same move.
-  'kept-terms-do-not-cancel': { ...initial, order: 0 },
+  'substitution-remains-defined': { ...initial, theta: DEGENERATE_THETA },
   // Push n out to a million: the dropped term shrinks, the product does not.
-  'dropped-term-is-not-amplified': { ...initial, n: 1_000_000 },
+  'discarded-effect-vanishes': { ...initial, n: 1_000_000 },
 };
-
-/**
- * Let the numbers stand alone for a moment before the reader is told what they
- * mean. Scrolling or a keypress brings the line forward — a reader who has
- * already seen it should not have to wait for prose.
- */
-function useAfterABeat(delayMs = 2200): boolean {
-  const [arrived, setArrived] = useState(false);
-
-  useEffect(() => {
-    if (arrived) return;
-    const show = () => setArrived(true);
-    const timer = window.setTimeout(show, delayMs);
-    window.addEventListener('scroll', show, { once: true, passive: true });
-    window.addEventListener('keydown', show, { once: true });
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('scroll', show);
-      window.removeEventListener('keydown', show);
-    };
-  }, [arrived, delayMs]);
-
-  return arrived;
-}
 
 function HookTable() {
   return (
@@ -164,41 +130,34 @@ function Beats({
   params: Params;
   onChange: (patch: Partial<Params>) => void;
 }) {
-  const readbackArrived = useAfterABeat();
-
   return (
     <>
       <HookTable />
-      {readbackArrived ? <Reveal record={record} /> : null}
+      <Reveal record={record} />
+      <Essence n={params.n} />
 
-      {readbackArrived ? (
-        <>
-          <Essence n={params.n} />
+      <WitnessSetup />
 
-          <WitnessSetup />
-
-          <InlineCommit
-            beat={5}
-            promptId="drop-alpha-squared"
-            mode="choice"
-            prompt="The α² terms are much smaller than the α terms. Can we drop them?"
-            options={['Yes, always', 'No, never', 'Depends — on what?']}
-          >
-            {() => (
-              <>
-                <TwoColumns />
-                <TruncationExplorer
-                  theta={params.theta}
-                  order={params.order}
-                  onChange={onChange}
-                />
-                <Reframe />
-                <Confirmation />
-              </>
-            )}
-          </InlineCommit>
-        </>
-      ) : null}
+      <InlineCommit
+        beat={5}
+        promptId="drop-alpha-squared"
+        mode="choice"
+        prompt="The α² terms are much smaller than the α terms. Can we drop them?"
+        options={['Yes, always', 'No, never', 'Depends — on what?']}
+      >
+        {() => (
+          <>
+            <TwoColumns />
+            <TruncationExplorer
+              theta={params.theta}
+              order={params.order}
+              onChange={onChange}
+            />
+            <Reframe />
+            <Confirmation />
+          </>
+        )}
+      </InlineCommit>
     </>
   );
 }
