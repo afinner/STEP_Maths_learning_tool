@@ -3,7 +3,6 @@ id: small-enough-to-ignore
 title: Small enough to ignore
 claim: If a quantity is heading to zero, I can replace it with zero. Simplify first, take the limit afterwards.
 context: STEP
-draft: true
 hypotheses:
   - id: substitution-remains-defined
     statement: Replacing the small quantity by zero leaves a defined expression at the point of interest.
