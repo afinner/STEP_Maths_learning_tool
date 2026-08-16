@@ -38,11 +38,9 @@ const initial: Params = {
 
 export const presets: Record<string, Params> = {
   // The denominator's first-order term is absent, not small.
-  'retained-scale-survives': { ...initial, theta: DEGENERATE_THETA },
-  // Keep only O(1): both series retain nothing at all, and n - n is the same move.
-  'remainder-is-relatively-small': { ...initial, order: 0 },
+  'substitution-remains-defined': { ...initial, theta: DEGENERATE_THETA },
   // Push n out to a million: the dropped term shrinks, the product does not.
-  'later-operations-preserve-scale': { ...initial, n: 1_000_000 },
+  'discarded-effect-vanishes': { ...initial, n: 1_000_000 },
 };
 
 function HookTable() {

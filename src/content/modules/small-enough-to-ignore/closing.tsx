@@ -52,7 +52,7 @@ function Bank() {
           <thead>
             <tr>
               <th scope="col">Question</th>
-              <th scope="col">Why ρ collapses</th>
+              <th scope="col">What happens to the discarded term</th>
             </tr>
           </thead>
           <tbody>
@@ -321,8 +321,8 @@ export default function SmallEnoughToIgnoreClosing() {
       <Calibration />
 
       <p className="takeaway">
-        Look at what survives <em>before</em> you decide what to drop. If what survives
-        is zero, you dropped too much.
+        Ask what must survive: the requested limit, or the leading scale. Track the
+        discarded effect for the first; compare kept with dropped for the second.
       </p>
       <p className="panel-note">α was fixed at {ALPHA} throughout.</p>
     </div>

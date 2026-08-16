@@ -36,7 +36,9 @@ import {
   seriesCoefficient,
   thetaSweep,
   toFraction,
+  truncationError,
   transferAnswerKey,
+  transferPreservesLimit,
   valueOr,
   type Order,
 } from './compute';
@@ -299,7 +301,7 @@ describe('witness table: theta = pi/3', () => {
 });
 
 /* -------------------------------------------------------------------------- *
- * The decisive quantity
+ * The relative-separation diagnostic
  * -------------------------------------------------------------------------- */
 
 describe('rho', () => {
@@ -312,11 +314,6 @@ describe('rho', () => {
     // rho scales like 1/alpha: ten times smaller alpha, ten times larger rho.
     expect(tenth / first).toBeCloseTo(10, 6);
     expect(hundredth / tenth).toBeCloseTo(10, 6);
-    expect(rho(SAFE_THETA, 1e-6, 1).verdict).toBe('well-separated');
-  });
-
-  it('does not call a merely non-zero finite ratio safe', () => {
-    expect(rho(SAFE_THETA, 1, 1).verdict).toBe('weak-separation');
   });
 
   it('is 2cot(theta)/alpha in the numerator, as the spec states', () => {
@@ -332,14 +329,27 @@ describe('rho', () => {
       expect(report.denominator.kept).toBe(0);
       expect(report.denominator.rho).toBe(0);
       expect(report.binding).toBe(0);
-      expect(report.verdict).toBe('uninformative');
     }
   });
 
   it('recovers at theta = 0 once the second order is retained', () => {
     const report = rho(DEGENERATE_THETA, 0.01, 2);
     expect(report.denominator.kept).toBeGreaterThan(0);
-    expect(report.verdict).toBe('well-separated');
+    expect(report.binding).toBeGreaterThan(0);
+  });
+
+  it('can be zero even when first order preserves the requested limit', () => {
+    const theta = Math.PI / 2;
+    const report = rho(theta, 0.01, 1);
+    expect(report.numerator.kept).toBe(0);
+    expect(report.binding).toBe(0);
+    expect(Math.abs(valueOr(rTruncated(theta, 0.01, 1), NaN))).toBe(0);
+    expect(valueOr(rExact(theta, 1e-6), NaN)).toBeCloseTo(0, 5);
+    const coarse = truncationError(rExact(theta, 0.01), rTruncated(theta, 0.01, 1));
+    const fine = truncationError(rExact(theta, 0.001), rTruncated(theta, 0.001, 1));
+    expect(coarse).not.toBeNull();
+    expect(fine).not.toBeNull();
+    expect(fine as number).toBeLessThan(coarse as number);
   });
 
   it('is zero for the hook: everything kept cancels', () => {
@@ -523,8 +533,25 @@ describe('measurement', () => {
   });
 
   it('separates shortcuts that preserve a limit from an amplified remainder', () => {
+    for (const item of TRANSFER_CASES) {
+      const earlierError = Math.abs(item.exact(1_000) - item.expectedLimit);
+      const laterError = Math.abs(item.exact(1_000_000) - item.expectedLimit);
+      expect(laterError).toBeLessThan(earlierError);
+      expect(item.exact(1_000_000)).toBeCloseTo(item.expectedLimit, 5);
+    }
+
+    const shortcuts = Object.fromEntries(
+      TRANSFER_CASES.map((item) => [item.id, item.shortcut(1_000_000)]),
+    );
+    expect(shortcuts).toEqual({ a: 3, b: 0, c: 0.5, d: 0 });
+
+    expect(TRANSFER_CASES.map((item) => [item.id, transferPreservesLimit(item)])).toEqual([
+      ['a', true],
+      ['b', false],
+      ['c', true],
+      ['d', true],
+    ]);
     expect(transferAnswerKey()).toBe('a,c,d');
-    expect(TRANSFER_CASES.find((item) => item.id === 'b')?.preservesLimit).toBe(false);
   });
 });
 

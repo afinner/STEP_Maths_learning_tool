@@ -109,18 +109,13 @@ describe('module shell', () => {
 describe('Module 01', () => {
   const hypotheses = [
     {
-      id: 'retained-scale-survives',
-      statement: 'a retained scale survives',
+      id: 'substitution-remains-defined',
+      statement: 'the substituted expression remains defined',
       violatedBy: 'the leading coefficient vanishes',
     },
     {
-      id: 'remainder-is-relatively-small',
-      statement: 'the remainder is relatively small',
-      violatedBy: 'everything retained cancels',
-    },
-    {
-      id: 'later-operations-preserve-scale',
-      statement: 'later operations preserve scale',
+      id: 'discarded-effect-vanishes',
+      statement: 'the discarded effect vanishes',
       violatedBy: 'a large factor restores the remainder',
     },
   ];

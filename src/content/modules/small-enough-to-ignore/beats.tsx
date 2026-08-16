@@ -109,13 +109,16 @@ export function Essence({ n }: { n: number }) {
 
       <div className="prose">
         <p>
-          That ratio is the whole diagnostic. Truncation is legitimate exactly when ρ
-          runs off to infinity as the small quantity shrinks. Here it is {formatRho(report.rho)},
-          at every n, forever.
+          That ratio diagnoses relative information. If ρ runs off to infinity, the
+          retained part dominates the leading omitted term. Here it is{' '}
+          {formatRho(report.rho)}, at every n, forever: rounding the root to n loses its
+          leading correction. The outside factor n then shows that it also changes this
+          requested limit.
         </p>
         <p className="statement">
           Look at what survives <em>before</em> you decide what to drop. If what
-          survives is zero, you dropped too much.
+          survives is zero, you have lost leading relative information; now check
+          separately whether the discarded effect changes the limit you were asked for.
         </p>
         <p>
           That is a procedural inversion, not a slogan. The habit is: decide what is
@@ -348,15 +351,15 @@ export function TruncationExplorer({ theta, order, onChange }: ExplorerProps) {
         </div>
         <div>
           <span className="term">ρ here</span>
-          <span
-            className={`value ${report.verdict === 'well-separated' ? 'value-decisive' : 'value-indeterminate'}`}
-          >
+          <span className="value">
             {formatRho(report.binding)}
           </span>
         </div>
         <div>
-          <span className="term">separation now</span>
-          <span className="value value-text">{report.verdict}</span>
+          <span className="term">relative information</span>
+          <span className="value value-text">
+            {report.binding === 0 ? 'leading scale not retained' : 'compare as α shrinks'}
+          </span>
         </div>
       </div>
 
@@ -396,6 +399,13 @@ export function Reframe() {
         <p className="statement">
           The order you need to expand to is not a property of the expression. It is a
           property of the point you are standing at.
+        </p>
+        <p>
+          There is a weaker question too. At θ = π/2, first order retains zero in the
+          numerator, so ρ is zero there; nevertheless both the first-order approximation
+          and the exact expression tend to zero. The limit is preserved even though the
+          leading relative correction is not. A zero ρ diagnoses lost relative
+          information, not automatically a wrong limit.
         </p>
       </div>
     </section>

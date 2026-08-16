@@ -52,6 +52,17 @@ export function valueOr(e: Estimate, fallback: number): number {
   return isValue(e) ? e.value : fallback;
 }
 
+/**
+ * The decisive quantity for preserving a requested limit: the effect of the
+ * truncation after all surrounding operations. Null means one expression is
+ * unavailable, so direct substitution has not determined a comparable value.
+ */
+export function truncationError(reference: Estimate, approximation: Estimate): number | null {
+  return isValue(reference) && isValue(approximation)
+    ? Math.abs(reference.value - approximation.value)
+    : null;
+}
+
 /* ------------------------------------------------------------------------- *
  * Amplifiers: why a dropped term comes back
  * ------------------------------------------------------------------------- */
@@ -400,18 +411,7 @@ export interface RhoReport {
   denominator: RhoPart;
   /** The smaller of the two: a truncation is only as good as its worse half. */
   binding: number;
-  /**
-   * Truncation is legitimate iff rho tends to infinity as alpha tends to zero.
-   * rho scales like 1/alpha whenever the retained terms survive. The display
-   * classification reports only the separation at the current alpha; it does
-   * not replace the limiting argument.
-   */
-  /** A finite observation, not a claim about the limiting behaviour. */
-  verdict: 'uninformative' | 'weak-separation' | 'well-separated';
 }
-
-/** A display threshold only. Asymptotic validity still requires rho to diverge. */
-export const WELL_SEPARATED_RHO = 10;
 
 /** How far past the truncation to look for the leading discarded term. */
 const DROPPED_TERM_SEARCH_DEPTH = 4;
@@ -443,12 +443,6 @@ export function rho(theta: number, alpha: number, order: Order): RhoReport {
     numerator,
     denominator,
     binding,
-    verdict:
-      binding === 0
-        ? 'uninformative'
-        : binding >= WELL_SEPARATED_RHO
-          ? 'well-separated'
-          : 'weak-separation',
   };
 }
 
@@ -714,15 +708,57 @@ export const ORDER_ITEMS: readonly OrderItem[] = [
  * asymptotic information but still preserve the requested limit; the learner
  * must judge the surrounding scale rather than repeat "never substitute zero".
  */
-export const TRANSFER_CASES = [
-  { id: 'a', label: '3 + 1/n → 3 + 0', preservesLimit: true },
-  { id: 'b', label: 'n sin(1/n) → n · 0', preservesLimit: false },
-  { id: 'c', label: '(1 + 1/n)/(2 + 1/n) → 1/2', preservesLimit: true },
-  { id: 'd', label: '√(n² + 1) − n → n − n', preservesLimit: true },
-] as const;
+export interface TransferCase {
+  id: string;
+  label: string;
+  expectedLimit: number;
+  shortcutLimit: number;
+  exact(n: number): number;
+  shortcut(n: number): number;
+}
+
+export const TRANSFER_CASES: readonly TransferCase[] = [
+  {
+    id: 'a',
+    label: '3 + 1/n → 3 + 0',
+    expectedLimit: 3,
+    shortcutLimit: 3,
+    exact: (n) => 3 + 1 / n,
+    shortcut: () => 3,
+  },
+  {
+    id: 'b',
+    label: 'n sin(1/n) → n · 0',
+    expectedLimit: 1,
+    shortcutLimit: 0,
+    exact: (n) => n * Math.sin(1 / n),
+    shortcut: () => 0,
+  },
+  {
+    id: 'c',
+    label: '(1 + 1/n)/(2 + 1/n) → 1/2',
+    expectedLimit: 0.5,
+    shortcutLimit: 0.5,
+    exact: (n) => (1 + 1 / n) / (2 + 1 / n),
+    shortcut: () => 0.5,
+  },
+  {
+    id: 'd',
+    label: '√(n² + 1) − n → n − n',
+    expectedLimit: 0,
+    shortcutLimit: 0,
+    // Rationalised so the verification does not lose the correction numerically.
+    exact: (n) => 1 / (Math.sqrt(n * n + 1) + n),
+    shortcut: () => 0,
+  },
+];
+
+export function transferPreservesLimit(item: TransferCase): boolean {
+  return item.shortcutLimit === item.expectedLimit;
+}
 
 export function transferAnswerKey(): string {
-  return TRANSFER_CASES.filter((item) => item.preservesLimit)
+  return TRANSFER_CASES.filter((item) => transferPreservesLimit(item))
     .map((item) => item.id)
     .sort()
     .join(',');
