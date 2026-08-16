@@ -9,6 +9,7 @@ import {
   SAFE_THETA,
   THETA_MAX_DEGREES,
   THETA_MIN_DEGREES,
+  TRANSFER_CASES,
   WITNESS_ALPHAS,
   bankByAmplifier,
   degeneratePointsOf,
@@ -35,6 +36,7 @@ import {
   seriesCoefficient,
   thetaSweep,
   toFraction,
+  transferAnswerKey,
   valueOr,
   type Order,
 } from './compute';
@@ -310,7 +312,11 @@ describe('rho', () => {
     // rho scales like 1/alpha: ten times smaller alpha, ten times larger rho.
     expect(tenth / first).toBeCloseTo(10, 6);
     expect(hundredth / tenth).toBeCloseTo(10, 6);
-    expect(rho(SAFE_THETA, 1e-6, 1).verdict).toBe('safe');
+    expect(rho(SAFE_THETA, 1e-6, 1).verdict).toBe('well-separated');
+  });
+
+  it('does not call a merely non-zero finite ratio safe', () => {
+    expect(rho(SAFE_THETA, 1, 1).verdict).toBe('weak-separation');
   });
 
   it('is 2cot(theta)/alpha in the numerator, as the spec states', () => {
@@ -326,14 +332,14 @@ describe('rho', () => {
       expect(report.denominator.kept).toBe(0);
       expect(report.denominator.rho).toBe(0);
       expect(report.binding).toBe(0);
-      expect(report.verdict).toBe('unsafe');
+      expect(report.verdict).toBe('uninformative');
     }
   });
 
   it('recovers at theta = 0 once the second order is retained', () => {
     const report = rho(DEGENERATE_THETA, 0.01, 2);
     expect(report.denominator.kept).toBeGreaterThan(0);
-    expect(report.verdict).toBe('safe');
+    expect(report.verdict).toBe('well-separated');
   });
 
   it('is zero for the hook: everything kept cancels', () => {
@@ -420,7 +426,9 @@ describe('readouts', () => {
   });
 
   it('never renders a non-value as a number', () => {
-    expect(formatReadout(rTruncated(DEGENERATE_THETA, ALPHA, 1))).toBe('indeterminate');
+    expect(formatReadout(rTruncated(DEGENERATE_THETA, ALPHA, 1))).toBe(
+      'approximation unavailable',
+    );
     expect(formatReadout(rTruncated(SAFE_THETA, ALPHA, 1))).toBe('-0.577');
   });
 
@@ -490,6 +498,10 @@ describe('measurement', () => {
     expect(third?.limit()).toBeCloseTo(1 / 24, 6);
   });
 
+  it('counts powers through the first surviving term, including zero coefficients', () => {
+    expect(ORDER_ITEMS.map((item) => item.ordersPastLeading)).toEqual([1, 2, 4]);
+  });
+
   it('writes those limits as fractions', () => {
     expect(ORDER_ITEMS.map((item) => formatLimit(item.limit()))).toEqual([
       '3/2',
@@ -509,6 +521,11 @@ describe('measurement', () => {
     // Keeping nothing gives zero, and zero is below one half.
     expect(hookErrorDirection()).toBe('too small');
   });
+
+  it('separates shortcuts that preserve a limit from an amplified remainder', () => {
+    expect(transferAnswerKey()).toBe('a,c,d');
+    expect(TRANSFER_CASES.find((item) => item.id === 'b')?.preservesLimit).toBe(false);
+  });
 });
 
 describe('estimates', () => {
@@ -516,7 +533,7 @@ describe('estimates', () => {
     for (const order of ORDERS) {
       const result = rTruncated(DEGENERATE_THETA, 0.1, order);
       if (!isValue(result)) {
-        expect(formatEstimate(result, 4)).toBe('indeterminate');
+        expect(formatEstimate(result, 4)).toBe('approximation unavailable');
       } else {
         expect(Number.isFinite(result.value)).toBe(true);
       }

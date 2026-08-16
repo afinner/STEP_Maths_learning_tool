@@ -10,12 +10,14 @@ import {
 import {
   ALPHA,
   ORDER_ITEMS,
+  TRANSFER_CASES,
   bankByAmplifier,
   degeneratePointsOf,
   formatLimit,
   hook,
   hookErrorDirection,
   parseOrderAnswer,
+  transferAnswerKey,
 } from './compute';
 
 /**
@@ -25,35 +27,6 @@ import {
  * Nothing here is timed. The module argues for pausing before you simplify, and
  * measuring speed would contradict the content.
  */
-
-/* -------------------------------------------------------------------------- *
- * Beat 6, continued — the domain of the rule
- * -------------------------------------------------------------------------- */
-
-function Domain() {
-  const failures = degeneratePointsOf('r');
-
-  return (
-    <section className="beat-panel" aria-labelledby="domain-heading">
-      <h3 id="domain-heading" className="panel-heading">
-        Where truncating early is safe
-      </h3>
-      <div className="prose">
-        <p>
-          Wherever the leading coefficient of what survives is non-zero. For R that is
-          every θ except {failures.map((degrees) => `${degrees}°`).join(' and ')} and
-          their repeats — a set of measure zero. Truncation works almost everywhere.
-        </p>
-        <p>
-          Which is exactly why the habit survives. You will be right nearly every time
-          you use it. The claim is not false; it is unguarded. It has a boundary, and
-          examination questions are written to put you on that boundary, because that
-          is where the reasoning is visible.
-        </p>
-      </div>
-    </section>
-  );
-}
 
 /* -------------------------------------------------------------------------- *
  * Beat 7 — the bank
@@ -121,8 +94,8 @@ function OrderPrediction() {
             question={<p className="measure-expression">{item.text}</p>}
             input={{
               kind: 'number',
-              label: 'Orders past the leading one',
-              placeholder: '1, 2, 3…',
+              label: 'Powers past the leading one (including zero coefficients)',
+              placeholder: '1, 2, 4…',
             }}
             mark={(response) => {
               const orders = parseOrderAnswer(response);
@@ -226,6 +199,39 @@ function DirectionOfError() {
   );
 }
 
+/** Farther transfer: decide from the surrounding scale, not the taught notation. */
+function PreserveTheLimit() {
+  return (
+    <>
+      <h4 className="measure-heading">When does the shortcut preserve the limit?</h4>
+      <p className="panel-note">
+        Select every replacement that leaves the requested limit unchanged. A shortcut
+        may lose useful detail and still preserve a limit.
+      </p>
+      <ol className="measure-list">
+        <MeasureItem
+          itemId="cross-context-preserve-limit"
+          question={<p>As n tends to infinity, which replacements preserve the limit?</p>}
+          input={{
+            kind: 'multi',
+            options: TRANSFER_CASES.map(({ id, label }) => ({ id, label })),
+          }}
+          mark={(response) => ({ correct: response === transferAnswerKey() })}
+          explanation={
+            <p>
+              A, C and D preserve the requested limit. B does not: sin(1/n) is small,
+              but multiplication by n restores it to leading order. D is the useful
+              warning: replacing the root by n loses the leading correction, yet the
+              unscaled difference still tends to zero. Judge the question being asked,
+              not the appearance of a small term.
+            </p>
+          }
+        />
+      </ol>
+    </>
+  );
+}
+
 /** M3 — calibration. Their own commitments, read back. */
 function Calibration() {
   // Read once, when the reader asks: the log fills up as they work down the page.
@@ -300,7 +306,6 @@ function Calibration() {
 export default function SmallEnoughToIgnoreClosing() {
   return (
     <div className="closing">
-      <Domain />
       <Bank />
 
       <section className="beat-panel" aria-labelledby="measure-heading">
@@ -310,6 +315,7 @@ export default function SmallEnoughToIgnoreClosing() {
         <OrderPrediction />
         <LocateThePoint />
         <DirectionOfError />
+        <PreserveTheLimit />
       </section>
 
       <Calibration />

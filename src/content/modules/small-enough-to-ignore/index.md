@@ -3,20 +3,19 @@ id: small-enough-to-ignore
 title: Small enough to ignore
 claim: If a quantity is heading to zero, I can replace it with zero. Simplify first, take the limit afterwards.
 context: STEP
-draft: true
 hypotheses:
-  - id: leading-term-survives
-    statement: The leading term you keep is non-zero at the point you are standing at.
+  - id: retained-scale-survives
+    statement: After substitution and exact cancellation, the part you retain has a non-zero leading term.
     violatedBy: >-
       At theta = 0 the denominator's first-order term is -alpha sin(theta), which
       is not small but absent. The term you discarded is the whole denominator.
-  - id: kept-terms-do-not-cancel
-    statement: The terms you keep do not cancel one another.
+  - id: remainder-is-relatively-small
+    statement: The discarded remainder is small compared with the first term that actually survives.
     violatedBy: >-
-      Round the root down and the two leading terms subtract away exactly,
-      leaving nothing to carry the answer.
-  - id: dropped-term-is-not-amplified
-    statement: Nothing multiplies the term you dropped back up to size.
+      Round the root down and the retained terms subtract away exactly. Relative
+      to zero, even a remainder tending to zero is decisive.
+  - id: later-operations-preserve-scale
+    statement: No later multiplication, division, or cancellation promotes the discarded remainder back to leading order.
     violatedBy: >-
       A remainder of order 1/n meets a factor of n and arrives at the same size
       as the answer, however large n gets.
@@ -28,15 +27,16 @@ decisiveQuantity:
   name: kept over dropped
   description: >-
     The size of everything your truncation retains, over the size of the leading
-    term it discards. Truncation is legitimate exactly when this tends to
-    infinity; where what you kept is zero, rho is zero and the approximation
+    term it discards. A large value means good separation at the displayed
+    parameters; asymptotic truncation is justified only when this ratio tends to
+    infinity. Where what you kept is zero, rho is zero and the approximation
     says nothing at all.
 repairedIntuition: >-
   Smallness is not a property of a quantity. It is a property of that quantity
   relative to what survives beside it, so expand to the order at which the first
   surviving term appears: ask what the expression becomes at the point you care
   about, then check whether what is left is non-zero.
-boundary: Truncating early is safe wherever the leading coefficient of what survives is non-zero — which is almost everywhere, and is exactly why the habit outlives its domain.
+boundary: Truncation is justified after you have kept through the first non-zero surviving term and checked that the omitted remainder stays small relative to it through every later operation.
 provenance: >-
   2022 STEP 3 Q6, with 2024 STEP 3 Q2(ii)(a) as the opening witness. Both are
   paraphrased into this module's framing; the official papers are linked from

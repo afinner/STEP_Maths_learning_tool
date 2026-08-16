@@ -132,8 +132,8 @@ export function Essence({ n }: { n: number }) {
         ))}
       </dl>
       <p className="panel-note">
-        Those two are the only mechanisms in this catalogue. This question fires both
-        at once; most fire one.
+        These are the two mechanisms at work in this example. This question fires both
+        at once; another false belief may need a different description.
       </p>
     </section>
   );
@@ -349,13 +349,13 @@ export function TruncationExplorer({ theta, order, onChange }: ExplorerProps) {
         <div>
           <span className="term">ρ here</span>
           <span
-            className={`value ${report.verdict === 'safe' ? 'value-decisive' : 'value-indeterminate'}`}
+            className={`value ${report.verdict === 'well-separated' ? 'value-decisive' : 'value-indeterminate'}`}
           >
             {formatRho(report.binding)}
           </span>
         </div>
         <div>
-          <span className="term">truncation</span>
+          <span className="term">separation now</span>
           <span className="value value-text">{report.verdict}</span>
         </div>
       </div>
@@ -366,8 +366,8 @@ export function TruncationExplorer({ theta, order, onChange }: ExplorerProps) {
 
       <p className="panel-note">
         α is fixed at {ALPHA} throughout. Set the order to {ORDER_LABELS[1]} and drag θ
-        through zero: the value runs away on the approach, and at the point itself
-        there is no value to show.
+        through zero: the exact value runs away, while at the point the first-order
+        approximation has retained too little to report a value.
       </p>
     </section>
   );

@@ -190,6 +190,11 @@ export function hookTable(ns: readonly number[] = HOOK_TABLE_N): HookSample[] {
 
 export const MAX_ORDER = 3;
 export type Order = 0 | 1 | 2 | 3;
+export interface Params {
+  theta: number;
+  order: Order;
+  n: number;
+}
 export const ORDERS: readonly Order[] = [0, 1, 2, 3];
 
 /** How the slider labels each stop, in KaTeX and in plain readable text. */
@@ -397,11 +402,16 @@ export interface RhoReport {
   binding: number;
   /**
    * Truncation is legitimate iff rho tends to infinity as alpha tends to zero.
-   * rho scales like 1/alpha whenever the retained terms survive, so the verdict
-   * turns on exactly one thing: whether what you kept is non-zero.
+   * rho scales like 1/alpha whenever the retained terms survive. The display
+   * classification reports only the separation at the current alpha; it does
+   * not replace the limiting argument.
    */
-  verdict: 'safe' | 'unsafe';
+  /** A finite observation, not a claim about the limiting behaviour. */
+  verdict: 'uninformative' | 'weak-separation' | 'well-separated';
 }
+
+/** A display threshold only. Asymptotic validity still requires rho to diverge. */
+export const WELL_SEPARATED_RHO = 10;
 
 /** How far past the truncation to look for the leading discarded term. */
 const DROPPED_TERM_SEARCH_DEPTH = 4;
@@ -433,7 +443,12 @@ export function rho(theta: number, alpha: number, order: Order): RhoReport {
     numerator,
     denominator,
     binding,
-    verdict: binding === 0 ? 'unsafe' : 'safe',
+    verdict:
+      binding === 0
+        ? 'uninformative'
+        : binding >= WELL_SEPARATED_RHO
+          ? 'well-separated'
+          : 'weak-separation',
   };
 }
 
@@ -689,10 +704,29 @@ export const ORDER_ITEMS: readonly OrderItem[] = [
       const n = 100;
       return Math.pow(n, 4) * (Math.cos(1 / n) - 1 + 1 / (2 * n * n));
     },
-    ordersPastLeading: 3,
+    ordersPastLeading: 4,
     because: 'Two terms of the cosine are subtracted away by hand; the third survives.',
   },
 ];
+
+/**
+ * A transfer check in unfamiliar surface forms. Some replacements lose useful
+ * asymptotic information but still preserve the requested limit; the learner
+ * must judge the surrounding scale rather than repeat "never substitute zero".
+ */
+export const TRANSFER_CASES = [
+  { id: 'a', label: '3 + 1/n → 3 + 0', preservesLimit: true },
+  { id: 'b', label: 'n sin(1/n) → n · 0', preservesLimit: false },
+  { id: 'c', label: '(1 + 1/n)/(2 + 1/n) → 1/2', preservesLimit: true },
+  { id: 'd', label: '√(n² + 1) − n → n − n', preservesLimit: true },
+] as const;
+
+export function transferAnswerKey(): string {
+  return TRANSFER_CASES.filter((item) => item.preservesLimit)
+    .map((item) => item.id)
+    .sort()
+    .join(',');
+}
 
 /** How many orders past leading the learner says are needed. Whole numbers only. */
 export function parseOrderAnswer(raw: string): number | null {
@@ -796,16 +830,17 @@ export function formatLarge(value: number, decimals: number = R_DECIMALS): strin
   return formatFixed(value, magnitude >= 1000 ? 0 : decimals);
 }
 
-/** What a reader sees in place of a value that does not exist. */
-export const INDETERMINATE_LABEL = 'indeterminate';
+export function estimateLabel(e: Exclude<Estimate, { kind: 'value' }>): string {
+  return e.reason === 'divergent' ? 'diverges' : 'approximation unavailable';
+}
 
 export function formatEstimate(e: Estimate, decimals: number): string {
-  return isValue(e) ? formatFixed(e.value, decimals) : INDETERMINATE_LABEL;
+  return isValue(e) ? formatFixed(e.value, decimals) : estimateLabel(e);
 }
 
 /** The live readout beside the controls, where the value may be running away. */
 export function formatReadout(e: Estimate): string {
-  return isValue(e) ? formatLarge(e.value) : INDETERMINATE_LABEL;
+  return isValue(e) ? formatLarge(e.value) : estimateLabel(e);
 }
 
 /** A limit written the way it would be written by hand, where that is possible. */
