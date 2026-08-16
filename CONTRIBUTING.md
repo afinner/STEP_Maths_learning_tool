@@ -1,7 +1,7 @@
 # Adding a module
 
 A module is one false belief. Adding one means creating one directory with four
-files in it and running the build. Nothing else in the repository has to change:
+required files in it and running the build. Nothing else in the repository has to change:
 no route, no registry, no navigation entry, no index update.
 
 ```
@@ -12,6 +12,7 @@ src/content/modules/<module-id>/
   compute.test.ts  tests for the decisive quantity
 
   closing.tsx      optional: anything the module adds after the six beats
+  *.tsx            optional: module-local presentation components used by widget.tsx
 ```
 
 `<module-id>` is kebab-case and must equal the `id` in the frontmatter. It
@@ -101,8 +102,10 @@ want to check one in built form.
 
 ### Body
 
-The body supplies the **Run** beat and nothing else: the derivation the reader
-follows, in order, up to the point where the claim gets made. Do not write
+The body opens the **Run** beat: the static setup the reader follows before the
+interactive evidence. A larger widget may use module-local components for staged
+evidence, but those panels remain inside Run and must not recreate the template's
+Claim, Break, Repair, Boundary, or Bank sections. Do not write
 headings for the six beats — the template owns those, and the other five beats
 come from frontmatter and from the widget.
 
@@ -114,9 +117,10 @@ KaTeX runs in the browser.
 ## 2. `compute.ts`
 
 Pure functions. No DOM, no `Math.random()` without an explicit seed, no imports
-from the widget. Export a `Params` interface and a function computing the
-decisive quantity from it. Everything the widget displays should be derived
-here, so that the tests hold the widget to account and not just the maths.
+from the widget. Export a `Params` interface and functions computing the
+reference result, approximation, and decisive quantity from it. Mathematical
+truth, diagnostic classifications, and answer keys belong here. Presentational
+copy and layout do not: keep them beside the component that renders them.
 
 ## 3. `compute.test.ts`
 

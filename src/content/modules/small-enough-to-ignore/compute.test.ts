@@ -9,6 +9,7 @@ import {
   SAFE_THETA,
   THETA_MAX_DEGREES,
   THETA_MIN_DEGREES,
+  TRANSFER_CASES,
   WITNESS_ALPHAS,
   bankByAmplifier,
   degeneratePointsOf,
@@ -35,6 +36,9 @@ import {
   seriesCoefficient,
   thetaSweep,
   toFraction,
+  truncationError,
+  transferAnswerKey,
+  transferPreservesLimit,
   valueOr,
   type Order,
 } from './compute';
@@ -297,7 +301,7 @@ describe('witness table: theta = pi/3', () => {
 });
 
 /* -------------------------------------------------------------------------- *
- * The decisive quantity
+ * The relative-separation diagnostic
  * -------------------------------------------------------------------------- */
 
 describe('rho', () => {
@@ -310,7 +314,6 @@ describe('rho', () => {
     // rho scales like 1/alpha: ten times smaller alpha, ten times larger rho.
     expect(tenth / first).toBeCloseTo(10, 6);
     expect(hundredth / tenth).toBeCloseTo(10, 6);
-    expect(rho(SAFE_THETA, 1e-6, 1).verdict).toBe('safe');
   });
 
   it('is 2cot(theta)/alpha in the numerator, as the spec states', () => {
@@ -326,14 +329,27 @@ describe('rho', () => {
       expect(report.denominator.kept).toBe(0);
       expect(report.denominator.rho).toBe(0);
       expect(report.binding).toBe(0);
-      expect(report.verdict).toBe('unsafe');
     }
   });
 
   it('recovers at theta = 0 once the second order is retained', () => {
     const report = rho(DEGENERATE_THETA, 0.01, 2);
     expect(report.denominator.kept).toBeGreaterThan(0);
-    expect(report.verdict).toBe('safe');
+    expect(report.binding).toBeGreaterThan(0);
+  });
+
+  it('can be zero even when first order preserves the requested limit', () => {
+    const theta = Math.PI / 2;
+    const report = rho(theta, 0.01, 1);
+    expect(report.numerator.kept).toBe(0);
+    expect(report.binding).toBe(0);
+    expect(Math.abs(valueOr(rTruncated(theta, 0.01, 1), NaN))).toBe(0);
+    expect(valueOr(rExact(theta, 1e-6), NaN)).toBeCloseTo(0, 5);
+    const coarse = truncationError(rExact(theta, 0.01), rTruncated(theta, 0.01, 1));
+    const fine = truncationError(rExact(theta, 0.001), rTruncated(theta, 0.001, 1));
+    expect(coarse).not.toBeNull();
+    expect(fine).not.toBeNull();
+    expect(fine as number).toBeLessThan(coarse as number);
   });
 
   it('is zero for the hook: everything kept cancels', () => {
@@ -420,7 +436,9 @@ describe('readouts', () => {
   });
 
   it('never renders a non-value as a number', () => {
-    expect(formatReadout(rTruncated(DEGENERATE_THETA, ALPHA, 1))).toBe('indeterminate');
+    expect(formatReadout(rTruncated(DEGENERATE_THETA, ALPHA, 1))).toBe(
+      'approximation unavailable',
+    );
     expect(formatReadout(rTruncated(SAFE_THETA, ALPHA, 1))).toBe('-0.577');
   });
 
@@ -490,6 +508,10 @@ describe('measurement', () => {
     expect(third?.limit()).toBeCloseTo(1 / 24, 6);
   });
 
+  it('counts powers through the first surviving term, including zero coefficients', () => {
+    expect(ORDER_ITEMS.map((item) => item.ordersPastLeading)).toEqual([1, 2, 4]);
+  });
+
   it('writes those limits as fractions', () => {
     expect(ORDER_ITEMS.map((item) => formatLimit(item.limit()))).toEqual([
       '3/2',
@@ -509,6 +531,28 @@ describe('measurement', () => {
     // Keeping nothing gives zero, and zero is below one half.
     expect(hookErrorDirection()).toBe('too small');
   });
+
+  it('separates shortcuts that preserve a limit from an amplified remainder', () => {
+    for (const item of TRANSFER_CASES) {
+      const earlierError = Math.abs(item.exact(1_000) - item.expectedLimit);
+      const laterError = Math.abs(item.exact(1_000_000) - item.expectedLimit);
+      expect(laterError).toBeLessThan(earlierError);
+      expect(item.exact(1_000_000)).toBeCloseTo(item.expectedLimit, 5);
+    }
+
+    const shortcuts = Object.fromEntries(
+      TRANSFER_CASES.map((item) => [item.id, item.shortcut(1_000_000)]),
+    );
+    expect(shortcuts).toEqual({ a: 3, b: 0, c: 0.5, d: 0 });
+
+    expect(TRANSFER_CASES.map((item) => [item.id, transferPreservesLimit(item)])).toEqual([
+      ['a', true],
+      ['b', false],
+      ['c', true],
+      ['d', true],
+    ]);
+    expect(transferAnswerKey()).toBe('a,c,d');
+  });
 });
 
 describe('estimates', () => {
@@ -516,7 +560,7 @@ describe('estimates', () => {
     for (const order of ORDERS) {
       const result = rTruncated(DEGENERATE_THETA, 0.1, order);
       if (!isValue(result)) {
-        expect(formatEstimate(result, 4)).toBe('indeterminate');
+        expect(formatEstimate(result, 4)).toBe('approximation unavailable');
       } else {
         expect(Number.isFinite(result.value)).toBe(true);
       }

@@ -5,18 +5,13 @@ claim: If a quantity is heading to zero, I can replace it with zero. Simplify fi
 context: STEP
 draft: true
 hypotheses:
-  - id: leading-term-survives
-    statement: The leading term you keep is non-zero at the point you are standing at.
+  - id: substitution-remains-defined
+    statement: Replacing the small quantity by zero leaves a defined expression at the point of interest.
     violatedBy: >-
       At theta = 0 the denominator's first-order term is -alpha sin(theta), which
       is not small but absent. The term you discarded is the whole denominator.
-  - id: kept-terms-do-not-cancel
-    statement: The terms you keep do not cancel one another.
-    violatedBy: >-
-      Round the root down and the two leading terms subtract away exactly,
-      leaving nothing to carry the answer.
-  - id: dropped-term-is-not-amplified
-    statement: Nothing multiplies the term you dropped back up to size.
+  - id: discarded-effect-vanishes
+    statement: After every later operation, the effect of the discarded remainder still tends to zero.
     violatedBy: >-
       A remainder of order 1/n meets a factor of n and arrives at the same size
       as the answer, however large n gets.
@@ -24,19 +19,20 @@ predictionPrompt: >-
   As n gets large, what does n(sqrt(n^2 + 1) - n) approach? No working, no
   calculator — the first answer that feels right.
 decisiveQuantity:
-  symbol: \rho=\dfrac{|\text{kept}|}{|\text{dropped}|}
-  name: kept over dropped
+  symbol: E=|F-F_{\mathrm{trunc}}|
+  name: discarded effect
   description: >-
-    The size of everything your truncation retains, over the size of the leading
-    term it discards. Truncation is legitimate exactly when this tends to
-    infinity; where what you kept is zero, rho is zero and the approximation
-    says nothing at all.
+    The absolute difference between the original expression and the truncated
+    one, after every later operation. For a finite requested limit, replacing the
+    small term preserves it when both expressions remain defined and E tends to zero.
+    The secondary ratio rho measures the stronger question of retained relative
+    or leading-order information.
 repairedIntuition: >-
-  Smallness is not a property of a quantity. It is a property of that quantity
-  relative to what survives beside it, so expand to the order at which the first
-  surviving term appears: ask what the expression becomes at the point you care
-  about, then check whether what is left is non-zero.
-boundary: Truncating early is safe wherever the leading coefficient of what survives is non-zero — which is almost everywhere, and is exactly why the habit outlives its domain.
+  First ask what information you need. To preserve only a finite limit, track
+  whether the discarded contribution still tends to zero after every later operation.
+  To preserve leading-order or relative information, compare the remainder with
+  the first term that survives and expand until that scale is visible.
+boundary: For a finite requested limit, replacing a small quantity by zero preserves it when the resulting expression stays defined and the total discarded effect tends to zero; preserving leading-order information requires the stronger relative comparison measured by rho.
 provenance: >-
   2022 STEP 3 Q6, with 2024 STEP 3 Q2(ii)(a) as the opening witness. Both are
   paraphrased into this module's framing; the official papers are linked from
