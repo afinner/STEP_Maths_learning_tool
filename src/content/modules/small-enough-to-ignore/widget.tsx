@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ModuleShell, type WidgetHostProps } from '../../../components/ModuleShell';
 import { InlineCommit } from '../../../components/commit/InlineCommit';
-import type { CommitRecord } from '../../../components/commit/commitFlow';
+import { isCorrect, type CommitRecord } from '../../../components/commit/commitFlow';
 import { CONFIDENCE_LABELS } from '../../../lib/events';
 import {
   Confirmation,
@@ -11,6 +11,7 @@ import {
   TwoColumns,
   WitnessSetup,
 } from './beats';
+import { CuspBeat } from './Epicycloid';
 import {
   DEGENERATE_THETA,
   SAFE_THETA,
@@ -79,29 +80,32 @@ function useAfterABeat(delayMs = 2200): boolean {
 
 function HookTable() {
   return (
-    <table className="data-table">
-      <caption>What it actually does</caption>
-      <thead>
-        <tr>
-          <th scope="col">n</th>
-          <th scope="col">n(√(n² + 1) − n)</th>
-        </tr>
-      </thead>
-      <tbody>
-        {hookTable().map(({ n, value }) => (
-          <tr key={n}>
-            <th scope="row">{n.toLocaleString('en-GB')}</th>
-            <td className="numeric">{formatFixed(value, 7)}</td>
+    <div className="table-scroll" tabIndex={0} role="group" aria-label="What it actually does">
+      <table className="data-table">
+        <caption>What it actually does</caption>
+        <thead>
+          <tr>
+            <th scope="col">n</th>
+            <th scope="col">n(√(n² + 1) − n)</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {hookTable().map(({ n, value }) => (
+            <tr key={n}>
+              <th scope="row">{n.toLocaleString('en-GB')}</th>
+              <td className="numeric">{formatFixed(value, 7)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
 /** Beat 3. The reader's answer, then the value — never the other way round. */
 function Reveal({ record }: { record: CommitRecord }) {
-  const gotIt = record.value !== null && Math.abs(record.value - hook.limit) < 1e-6;
+  // The same predicate the gate marked the commitment with, not a second copy.
+  const gotIt = isCorrect(record, hook.limit);
   const confidence = record.confidence ? CONFIDENCE_LABELS[record.confidence] : null;
 
   return (
@@ -194,6 +198,7 @@ function Beats({
                 />
                 <Reframe />
                 <Confirmation />
+                <CuspBeat theta={params.theta} />
               </>
             )}
           </InlineCommit>

@@ -1,4 +1,5 @@
 import { AMPLIFIERS, type Amplifier } from '../../../lib/amplifiers';
+import { canonicalSelection } from '../../../lib/selection';
 
 /**
  * Module 01 — Small enough to ignore.
@@ -25,7 +26,9 @@ export type IndeterminateReason =
   /** The denominator you kept is exactly zero: not small, absent. */
   | 'retained-denominator-vanishes'
   /** A genuine pole: the value grows without bound. */
-  | 'divergent';
+  | 'divergent'
+  /** Asked for a quantity that only exists at a degenerate point. */
+  | 'not-degenerate';
 
 export type Estimate =
   | Readonly<{ kind: 'value'; value: number }>
@@ -192,14 +195,7 @@ export const MAX_ORDER = 3;
 export type Order = 0 | 1 | 2 | 3;
 export const ORDERS: readonly Order[] = [0, 1, 2, 3];
 
-/** How the slider labels each stop, in KaTeX and in plain readable text. */
-export const ORDER_LATEX: Readonly<Record<Order, string>> = {
-  0: 'O(1)',
-  1: 'O(\\alpha)',
-  2: 'O(\\alpha^{2})',
-  3: 'O(\\alpha^{3})',
-};
-
+/** How the control labels each stop. */
 export const ORDER_LABELS: Readonly<Record<Order, string>> = {
   0: 'O(1)',
   1: 'O(α)',
@@ -358,24 +354,6 @@ export const ALPHA = 0.001;
 
 /** Decimal places for R on screen. Chosen with ALPHA; see above. */
 export const R_DECIMALS = 3;
-
-export interface WitnessSample {
-  alpha: number;
-  exact: Estimate;
-  truncated: Estimate;
-}
-
-export function witnessTable(
-  theta: number,
-  order: Order,
-  alphas: readonly number[] = WITNESS_ALPHAS,
-): WitnessSample[] {
-  return alphas.map((alpha) => ({
-    alpha,
-    exact: rExact(theta, alpha),
-    truncated: rTruncated(theta, alpha, order),
-  }));
-}
 
 /* ------------------------------------------------------------------------- *
  * The decisive quantity
@@ -584,6 +562,19 @@ export const BANK: readonly BankEntry[] = [
   },
 ];
 
+/**
+ * What is actually behind a bank link.
+ *
+ * Every one of these goes to a STEP Support Programme worked paper, which
+ * carries the question, a full solution to every part and the examiner's report
+ * in one document. That is worth saying out loud twice over: the module told the
+ * reader these were the official papers, which they are not, and a bank of
+ * questions to work should not drop somebody into a model answer without warning
+ * them first.
+ */
+export const BANK_LINK_NOTE =
+  'Each link is a worked paper from the STEP Support Programme: the question, a full solution to every part, and the examiner\'s report. Work the question before you open it.';
+
 export interface BankGroup {
   amplifier: Amplifier;
   entries: readonly BankEntry[];
@@ -694,6 +685,20 @@ export const ORDER_ITEMS: readonly OrderItem[] = [
   },
 ];
 
+/**
+ * The answer key for the transfer item, in the exact form the widget submits.
+ * Built through the same canonical ordering as the response so the two cannot
+ * drift apart — they did once, and the item became unpassable.
+ */
+export function reciprocalPointsKey(): string {
+  return canonicalSelection(degeneratePointsOf('reciprocal').map(String));
+}
+
+/** Marks the transfer item. The taught answer is not accepted. */
+export function marksReciprocalPoints(response: string): boolean {
+  return response === reciprocalPointsKey();
+}
+
 /** How many orders past leading the learner says are needed. Whole numbers only. */
 export function parseOrderAnswer(raw: string): number | null {
   const text = raw.trim();
@@ -742,9 +747,17 @@ export function toFraction(
  * Display
  * ------------------------------------------------------------------------- */
 
-/** Fixed-decimal rendering, so a column of numbers lines up and can be compared. */
+/**
+ * Fixed-decimal rendering, so a column of numbers lines up and can be compared.
+ *
+ * A value that rounds to zero is shown as zero, without a sign. The gradient at
+ * the cusp on the negative x axis is tan(pi), which floats compute as -1.2e-16,
+ * and "-0.000" reads as a quantity that is slightly negative rather than one
+ * that is zero.
+ */
 export function formatFixed(value: number, decimals: number): string {
-  return value.toFixed(decimals);
+  const text = value.toFixed(decimals);
+  return /^-0(\.0+)?$/.test(text) ? text.slice(1) : text;
 }
 
 const SUPERSCRIPTS: Readonly<Record<string, string>> = {

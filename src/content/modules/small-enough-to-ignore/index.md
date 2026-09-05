@@ -3,7 +3,6 @@ id: small-enough-to-ignore
 title: Small enough to ignore
 claim: If a quantity is heading to zero, I can replace it with zero. Simplify first, take the limit afterwards.
 context: STEP
-draft: true
 hypotheses:
   - id: leading-term-survives
     statement: The leading term you keep is non-zero at the point you are standing at.
@@ -39,8 +38,8 @@ repairedIntuition: >-
 boundary: Truncating early is safe wherever the leading coefficient of what survives is non-zero — which is almost everywhere, and is exactly why the habit outlives its domain.
 provenance: >-
   2022 STEP 3 Q6, with 2024 STEP 3 Q2(ii)(a) as the opening witness. Both are
-  paraphrased into this module's framing; the official papers are linked from
-  the bank.
+  paraphrased into this module's framing; the bank links to the STEP Support
+  Programme's worked papers, which carry the questions and full solutions.
 added: 2026-08-15
 ---
 

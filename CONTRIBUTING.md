@@ -35,8 +35,13 @@ to:
 
 Every question a module draws on is **paraphrased into that module's own
 framing** and cited by reference. Put the citation in `provenance` — paper, year
-and question number, with a link to the official paper where one exists — and
-name the mathematical situation rather than quoting the setup.
+and question number — and name the mathematical situation rather than quoting the
+setup.
+
+Where a citation carries a link, **say what is behind it**. A link to an official
+past paper and a link to a worked paper containing full solutions are different
+objects, and a reader following a bank link to work a question needs to know
+which one they are about to open.
 
 The rule is about the words, not the mathematics: results, standard identities
 and the reasoning are not anyone's copyright, and a module is free to work

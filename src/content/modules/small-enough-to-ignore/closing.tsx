@@ -10,11 +10,13 @@ import {
 import {
   ALPHA,
   ORDER_ITEMS,
+  BANK_LINK_NOTE,
   bankByAmplifier,
   degeneratePointsOf,
   formatLimit,
   hook,
   hookErrorDirection,
+  marksReciprocalPoints,
   parseOrderAnswer,
 } from './compute';
 
@@ -72,30 +74,39 @@ function Bank() {
         would teach you to recognise surds and trigonometry, which is the habit this
         module exists to break.
       </p>
+      <p className="panel-note bank-warning">{BANK_LINK_NOTE}</p>
 
       {groups.map((group) => (
-        <table className="data-table" key={group.amplifier}>
-          <caption>{AMPLIFIER_NAMES[group.amplifier]}</caption>
-          <thead>
-            <tr>
-              <th scope="col">Question</th>
-              <th scope="col">Why ρ collapses</th>
-            </tr>
-          </thead>
-          <tbody>
-            {group.entries.map((entry) => (
-              <tr key={`${group.amplifier}-${entry.id}`}>
-                <th scope="row">
-                  <a href={entry.paper} rel="noopener" target="_blank">
-                    {entry.question}
-                  </a>
-                  <span className="bank-slot">{entry.slot}</span>
-                </th>
-                <td>{entry.why}</td>
+        <div
+          className="table-scroll"
+          key={group.amplifier}
+          tabIndex={0}
+          role="group"
+          aria-label={`${AMPLIFIER_NAMES[group.amplifier]} questions`}
+        >
+          <table className="data-table">
+            <caption>{AMPLIFIER_NAMES[group.amplifier]}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Question</th>
+                <th scope="col">Why ρ collapses</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {group.entries.map((entry) => (
+                <tr key={`${group.amplifier}-${entry.id}`}>
+                  <th scope="row">
+                    <a href={entry.paper} rel="noopener" target="_blank">
+                      {entry.question}
+                    </a>
+                    <span className="bank-slot">{entry.slot}</span>
+                  </th>
+                  <td>{entry.why}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ))}
     </section>
   );
@@ -152,7 +163,6 @@ function LocateThePoint() {
     id: String(degrees),
     label: `${degrees}°`,
   }));
-  const key = [...answer].sort((a, b) => a - b).join(',');
 
   return (
     <>
@@ -172,7 +182,7 @@ function LocateThePoint() {
             </>
           }
           input={{ kind: 'multi', options }}
-          mark={(response) => ({ correct: response === key })}
+          mark={(response) => ({ correct: marksReciprocalPoints(response) })}
           explanation={
             <p>
               {answer.map((degrees) => `${degrees}°`).join(' and ')}. This is the same
@@ -266,27 +276,29 @@ function Calibration() {
       ) : shown.length === 0 ? (
         <p className="panel-note">Nothing committed yet — the page is still ahead of you.</p>
       ) : (
-        <table className="data-table">
-          <caption>Your commitments, and how they turned out</caption>
-          <thead>
-            <tr>
-              <th scope="col">You said</th>
-              <th scope="col">How sure</th>
-              <th scope="col">Outcome</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((event) => (
-              <tr key={event.prompt_id}>
-                <th scope="row">{event.response}</th>
-                <td>{event.confidence ? CONFIDENCE_LABELS[event.confidence] : '—'}</td>
-                <td className={verdictFor(event) === 'wrong' ? 'is-wrong' : undefined}>
-                  {verdictFor(event)}
-                </td>
+        <div className="table-scroll" tabIndex={0} role="group" aria-label="Your commitments">
+          <table className="data-table">
+            <caption>Your commitments, and how they turned out</caption>
+            <thead>
+              <tr>
+                <th scope="col">You said</th>
+                <th scope="col">How sure</th>
+                <th scope="col">Outcome</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {shown.map((event) => (
+                <tr key={event.prompt_id}>
+                  <th scope="row">{event.response}</th>
+                  <td>{event.confidence ? CONFIDENCE_LABELS[event.confidence] : '—'}</td>
+                  <td className={verdictFor(event) === 'wrong' ? 'is-wrong' : undefined}>
+                    {verdictFor(event)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <p className="panel-note">

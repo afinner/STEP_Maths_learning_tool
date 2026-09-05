@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from 'react';
 import { emit } from '../../lib/events';
+import { canonicalSelection } from '../../lib/selection';
 
 export type MeasureInput =
   | { kind: 'number'; label: string; placeholder?: string }
@@ -118,7 +119,7 @@ export function MeasureItem({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                submit([...selection].sort().join(','));
+                submit(canonicalSelection(selection));
               }}
             >
               <fieldset className="measure-multi">

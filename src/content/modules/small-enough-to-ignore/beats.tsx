@@ -55,25 +55,27 @@ export function Essence({ n }: { n: number }) {
         Where the answer went
       </h3>
 
-      <table className="data-table">
-        <caption>Rounding √(n² + 1) down to n</caption>
-        <thead>
-          <tr>
-            <th scope="col">n</th>
-            <th scope="col">what you dropped</th>
-            <th scope="col">× n</th>
-          </tr>
-        </thead>
-        <tbody>
-          {HOOK_TABLE_N.map((row) => (
-            <tr key={row} className={row === n ? 'is-current' : undefined}>
-              <th scope="row">{row.toLocaleString('en-GB')}</th>
-              <td className="numeric">{formatSmall(hook.rawDroppedTerm(row))}</td>
-              <td className="numeric">{formatFixed(hook.droppedTerm(row), 1)}</td>
+      <div className="table-scroll" tabIndex={0} role="group" aria-label="Rounding the root down">
+        <table className="data-table">
+          <caption>Rounding √(n² + 1) down to n</caption>
+          <thead>
+            <tr>
+              <th scope="col">n</th>
+              <th scope="col">what you dropped</th>
+              <th scope="col">× n</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {HOOK_TABLE_N.map((row) => (
+              <tr key={row} className={row === n ? 'is-current' : undefined}>
+                <th scope="row">{row.toLocaleString('en-GB')}</th>
+                <td className="numeric">{formatSmall(hook.rawDroppedTerm(row))}</td>
+                <td className="numeric">{formatFixed(hook.droppedTerm(row), 1)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div className="prose">
         <p>
@@ -185,23 +187,25 @@ function WitnessColumn({
 }) {
   return (
     <div className={`witness-column witness-${tone}`}>
-      <table className="data-table">
-        <caption>{label}</caption>
-        <thead>
-          <tr>
-            <th scope="col">α</th>
-            <th scope="col">R(θ, α)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {WITNESS_ALPHAS.map((alpha) => (
-            <tr key={alpha}>
-              <th scope="row">{alpha}</th>
-              <td className="numeric">{formatEstimate(rExact(theta, alpha), 5)}</td>
+      <div className="table-scroll" tabIndex={0} role="group" aria-label="R at this point">
+        <table className="data-table">
+          <caption>{label}</caption>
+          <thead>
+            <tr>
+              <th scope="col">α</th>
+              <th scope="col">R(θ, α)</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {WITNESS_ALPHAS.map((alpha) => (
+              <tr key={alpha}>
+                <th scope="row">{alpha}</th>
+                <td className="numeric">{formatEstimate(rExact(theta, alpha), 5)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="witness-verdict">{verdict}</p>
     </div>
   );

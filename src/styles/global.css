@@ -377,7 +377,7 @@ kbd {
 .controls {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
 }
 
 .control {
@@ -403,6 +403,13 @@ kbd {
 .control input[type='range'] {
   width: 100%;
   accent-color: var(--accent);
+  height: 1.5rem;
+  cursor: pointer;
+}
+
+.control input[type='range']:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .button {
@@ -438,11 +445,18 @@ kbd {
 .gate {
   background: var(--accent-wash);
   border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  padding: var(--space-5) var(--space-6);
   display: grid;
   gap: var(--space-4);
-  max-width: var(--measure);
+  max-width: var(--measure-card);
+}
+
+.gate > p:first-child {
+  font-size: var(--size-xl);
+  line-height: 1.35;
+  text-wrap: pretty;
 }
 
 .gate p {
@@ -509,6 +523,13 @@ kbd {
 .reveal-verdict {
   font-size: var(--size-xl);
   line-height: 1.3;
+  text-wrap: pretty;
+}
+
+.reveal-verdict strong {
+  font-size: var(--size-2xl);
+  line-height: 1;
+  color: var(--accent);
 }
 
 .ledger-locked {
@@ -520,22 +541,39 @@ kbd {
 /* ---- Widget frame ------------------------------------------------------ */
 .widget {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-6);
   background: var(--paper-raised);
   border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
-  padding: var(--space-5);
-  box-shadow: var(--shadow);
+  padding: var(--space-6);
+}
+
+@media (max-width: 34rem) {
+  .widget {
+    padding: var(--space-4);
+    border-radius: var(--radius);
+  }
 }
 
 .widget-readout {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-5);
+  gap: var(--space-3) var(--space-5);
   font-family: var(--font-ui);
   font-size: var(--size-sm);
   padding-top: var(--space-4);
   border-top: 1px solid var(--rule);
+}
+
+.widget-readout > div {
+  padding-right: var(--space-5);
+  border-right: 1px solid var(--rule);
+  min-width: 7rem;
+}
+
+.widget-readout > div:last-child {
+  padding-right: 0;
+  border-right: 0;
 }
 
 /* Readout labels carry symbols — see the note on .data-table caption. */
@@ -625,6 +663,50 @@ kbd {
   border-bottom: none;
 }
 
+.data-table tbody tr:hover th,
+.data-table tbody tr:hover td {
+  background: var(--paper-sunken);
+}
+
+.data-table tbody tr.is-current:hover th,
+.data-table tbody tr.is-current:hover td {
+  background: var(--accent-wash);
+}
+
+/* A table that cannot be made narrower scrolls inside its own box rather than
+   pushing the page sideways. The wrapper is a div, so the table keeps its own
+   semantics for a screen reader, and it is focusable because a region that
+   scrolls must be reachable from the keyboard. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.table-scroll:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* Numbers never wrap — a figure broken across two lines cannot be compared with
+   the one above it. Prose in a table wraps like any other prose, which is what
+   keeps a text-heavy table readable on a narrow screen without turning the
+   table into a row of blocks and losing its semantics for a screen reader. */
+.data-table .numeric,
+.data-table thead th {
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .data-table th,
+  .data-table td {
+    padding: var(--space-2);
+  }
+
+  .data-table tbody th {
+    white-space: normal;
+  }
+}
+
 .data-table tr.is-current th,
 .data-table tr.is-current td {
   background: var(--accent-wash);
@@ -637,13 +719,16 @@ kbd {
 .beat-panel {
   display: grid;
   gap: var(--space-4);
-  padding-top: var(--space-5);
+  padding-top: var(--space-6);
   border-top: 1px solid var(--rule);
+  min-width: 0;
 }
 
 .panel-heading {
   font-family: var(--font-ui);
   font-size: var(--size-lg);
+  letter-spacing: -0.01em;
+  max-width: var(--measure-card);
 }
 
 .panel-note {
@@ -656,15 +741,16 @@ kbd {
 /* A line the reader is meant to carry away, or a step of working set apart. */
 .prose .statement {
   font-size: var(--size-lg);
-  line-height: 1.4;
-  padding-left: var(--space-4);
+  line-height: 1.45;
+  padding: var(--space-1) 0 var(--space-1) var(--space-4);
   border-left: 3px solid var(--accent);
+  text-wrap: pretty;
 }
 
 .amplifiers {
   display: grid;
   gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
   margin: 0;
 }
 
@@ -688,7 +774,7 @@ kbd {
 .columns {
   display: grid;
   gap: var(--space-5);
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
 }
 
 .witness-column {
@@ -737,6 +823,34 @@ kbd {
   margin-bottom: var(--space-4);
 }
 
+/* ---- Epicycloid (beat 5f, removable) ------------------------------------ */
+.epicycloid {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: minmax(min(15rem, 100%), 20rem) minmax(0, 1fr);
+  align-items: start;
+}
+
+.epicycloid-figure {
+  margin: 0;
+}
+
+.epicycloid-readout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.epicycloid-readout .widget-readout {
+  padding-top: 0;
+  border-top: 0;
+}
+
+@media (max-width: 40rem) {
+  .epicycloid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- Closing: bank and measurement -------------------------------------- */
 .closing {
   display: grid;
@@ -744,6 +858,14 @@ kbd {
   margin-top: var(--space-7);
   border-top: 1px solid var(--rule);
   padding-top: var(--space-6);
+}
+
+/* Says what is behind the links. Not an alarm — a note the reader needs before
+   they click into a full solution. */
+.bank-warning {
+  border-left: 3px solid var(--break);
+  padding-left: var(--space-4);
+  color: var(--ink-muted);
 }
 
 .bank-slot {

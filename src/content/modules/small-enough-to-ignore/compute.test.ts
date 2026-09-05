@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { canonicalSelection } from '../../../lib/selection';
 import {
   ALPHA,
   BANK,
+  BANK_LINK_NOTE,
   DEGENERATE_THETA,
   HOOK_TABLE_N,
   ORDERS,
@@ -12,6 +14,8 @@ import {
   WITNESS_ALPHAS,
   bankByAmplifier,
   degeneratePointsOf,
+  marksReciprocalPoints,
+  reciprocalPointsKey,
   degreesToRadians,
   formatEstimate,
   formatFixed,
@@ -424,6 +428,15 @@ describe('readouts', () => {
     expect(formatReadout(rTruncated(SAFE_THETA, ALPHA, 1))).toBe('-0.577');
   });
 
+  it('never signs a zero', () => {
+    // tan(pi) floats as -1.2e-16: the reader should see zero, not a shade under it.
+    expect(formatFixed(-1.2246e-16, 3)).toBe('0.000');
+    expect(formatFixed(-0, 2)).toBe('0.00');
+    expect(formatFixed(-0.0004, 3)).toBe('0.000');
+    // ...but a value that genuinely rounds to something keeps its sign.
+    expect(formatFixed(-0.6, 1)).toBe('-0.6');
+  });
+
   it('reports an unbounded rho as unbounded', () => {
     expect(formatRho(Number.POSITIVE_INFINITY)).toBe('unbounded');
     expect(formatRho(0)).toBe('0');
@@ -469,9 +482,16 @@ describe('the bank', () => {
   it('cites every question and links every paper', () => {
     for (const entry of BANK) {
       expect(entry.question).toMatch(/^\d{4} STEP [23], Q/);
-      expect(entry.paper).toMatch(/^https:\/\/step\.maths\.org\//);
+      expect(entry.paper).toMatch(/^https:\/\/step\.maths\.org\/.+\.pdf$/);
       expect(entry.why.length).toBeGreaterThan(20);
     }
+  });
+
+  it('warns that the links carry solutions', () => {
+    // These are worked papers, not bare question papers. A reader about to work
+    // a question should not be dropped into the model answer unannounced.
+    expect(BANK_LINK_NOTE).toMatch(/solution/i);
+    expect(BANK_LINK_NOTE).toMatch(/worked paper/i);
   });
 });
 
@@ -481,6 +501,33 @@ describe('measurement', () => {
     expect(degeneratePointsOf('r')).toEqual([0, 180]);
     // ...and the transfer item, which is deliberately not it.
     expect(degeneratePointsOf('reciprocal')).toEqual([90, 270]);
+  });
+
+  /**
+   * The response the widget submits and the key it is marked against are built
+   * in two different files. They once sorted differently — "270,90" against a
+   * key of "90,270" — and the transfer item could not be answered correctly by
+   * anyone. This test goes through the same canonical form the widget uses.
+   */
+  it('marks the transfer item on the answer a reader can actually give', () => {
+    const asSubmitted = (degrees: readonly number[]) =>
+      canonicalSelection(degrees.map(String));
+
+    // Both click orders produce the same submission, and both are correct.
+    expect(marksReciprocalPoints(asSubmitted([90, 270]))).toBe(true);
+    expect(marksReciprocalPoints(asSubmitted([270, 90]))).toBe(true);
+    expect(reciprocalPointsKey()).toBe(asSubmitted(degeneratePointsOf('reciprocal')));
+  });
+
+  it('does not accept the taught answer, which is the whole point of the item', () => {
+    const asSubmitted = (degrees: readonly number[]) =>
+      canonicalSelection(degrees.map(String));
+
+    expect(marksReciprocalPoints(asSubmitted(degeneratePointsOf('r')))).toBe(false);
+    expect(marksReciprocalPoints(asSubmitted([0, 180]))).toBe(false);
+    // Nor half an answer, nor everything at once.
+    expect(marksReciprocalPoints(asSubmitted([90]))).toBe(false);
+    expect(marksReciprocalPoints(asSubmitted([0, 90, 180, 270]))).toBe(false);
   });
 
   it('gets the M1 limits right, computed rather than written down', () => {
