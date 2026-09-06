@@ -14,9 +14,7 @@ hypotheses:
     violatedBy: >-
       A remainder of order 1/n meets a factor of n and arrives at the same size
       as the answer, however large n gets.
-predictionPrompt: >-
-  As n gets large, what does n(√(n² + 1) − n) approach? No working, no
-  calculator — the first answer that feels right.
+predictionPrompt: As n gets large, what does n(√(n² + 1) − n) approach?
 decisiveQuantity:
   symbol: E=|F-F_{\mathrm{trunc}}|
   name: discarded effect

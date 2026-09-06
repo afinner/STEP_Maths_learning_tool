@@ -8,7 +8,6 @@ export interface InlineCommitProps {
   promptId: string;
   mode: CommitMode;
   prompt: string;
-  hint?: string;
   options?: readonly string[];
   children: (record: CommitRecord) => ReactNode;
 }
@@ -25,7 +24,6 @@ export function InlineCommit({
   promptId,
   mode,
   prompt,
-  hint,
   options,
   children,
 }: InlineCommitProps) {
@@ -37,7 +35,6 @@ export function InlineCommit({
     <CommitGate
       mode={mode}
       prompt={prompt}
-      {...(hint !== undefined ? { hint } : {})}
       {...(options !== undefined ? { options } : {})}
       onCommit={(committed) => {
         setRecord(committed);

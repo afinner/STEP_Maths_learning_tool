@@ -131,7 +131,7 @@ describe('Module 01', () => {
     );
 
     expect(html).toContain('What does the expression approach?');
-    expect(html).toContain('Fractions are fine');
+    expect(html).toContain('Your answer');
     expect(Object.keys(moduleOnePresets).sort()).toEqual(hypotheses.map((h) => h.id).sort());
     expect((html.match(/ledger-item/g) ?? []).length).toBe(hypotheses.length);
   });

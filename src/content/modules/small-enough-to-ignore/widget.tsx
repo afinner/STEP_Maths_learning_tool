@@ -144,7 +144,6 @@ export default function SmallEnoughToIgnoreWidget(props: WidgetHostProps) {
         mode: 'numeric-with-confidence',
         beat: 2,
         promptId: 'hook-limit',
-        hint: 'No working, no calculator, no looking anything up. The first answer that feels right.',
         target: hook.limit,
       }}
     >

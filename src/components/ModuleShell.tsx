@@ -30,7 +30,6 @@ export interface CommitConfig {
   /** Which beat this commitment belongs to, for the event log. */
   beat: number;
   promptId: string;
-  hint?: string;
   /** The value the answer is marked against, where there is one. */
   target?: number;
 }
@@ -134,7 +133,6 @@ export function ModuleShell<P extends object>({
       <CommitGate
         mode={commit.mode}
         prompt={predictionPrompt}
-        {...(commit.hint !== undefined ? { hint: commit.hint } : {})}
         onCommit={onCommit}
       >
         {(committed) => (

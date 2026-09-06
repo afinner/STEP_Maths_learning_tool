@@ -70,7 +70,7 @@ document and the code ever disagree.
 | `claim` | string | **The false belief, in the learner's own voice.** First person, unhedged, no scare quotes. If it does not sound like something you would actually think, it is not the claim. |
 | `context` | `STEP` \| `first-year analysis` \| `general` | Where the belief bites. Add a value to the enum in `src/schema.ts` only when a module genuinely does not fit. |
 | `hypotheses` | array of `{ id, statement, violatedBy }` | The conditions the claim silently assumes. See below. |
-| `predictionPrompt` | string | What the reader commits to before seeing the result. A question with a small number of possible answers, answerable in five seconds. |
+| `predictionPrompt` | string | What the reader commits to before seeing the result. The question and nothing else — no instructions about how to answer it, and no note about what kind of answer is wanted. Answerable in five seconds. |
 | `decisiveQuantity` | `{ symbol, name, description }` | The one number that settles it. `symbol` is KaTeX (rendered at build time), `name` is human, `description` says which way it has to go for the claim to survive. |
 | `repairedIntuition` | string | The corrected mental model — still a picture, not a theorem statement. |
 | `boundary` | string | One sentence: when the original move **is** valid. |

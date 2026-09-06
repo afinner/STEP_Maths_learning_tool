@@ -234,13 +234,6 @@ kbd {
   max-width: var(--measure-card);
 }
 
-.claim-card .attribution {
-  display: block;
-  margin-top: var(--space-3);
-  font-family: var(--font-ui);
-  font-size: var(--size-xs);
-  color: var(--ink-faint);
-}
 
 .boundary-card {
   border-left: 3px solid var(--accent);

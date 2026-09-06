@@ -13,8 +13,6 @@ import {
 export interface CommitGateProps {
   mode: CommitMode;
   prompt: string;
-  /** Sits under the prompt: what kind of answer is wanted, and how to give it. */
-  hint?: string;
   /** For `choice` mode: the positions on offer. Choosing one is the commitment. */
   options?: readonly string[];
   /** Fired once, when the learner commits. */
@@ -35,7 +33,6 @@ const CONFIDENCES: readonly Confidence[] = ['guessing', 'fairly-sure', 'certain'
 export function CommitGate({
   mode,
   prompt,
-  hint,
   options = [],
   onCommit,
   children,
@@ -71,7 +68,6 @@ export function CommitGate({
     return (
       <div className="gate">
         <p>{prompt}</p>
-        {hint ? <p className="gate-hint">{hint}</p> : null}
         <div className="gate-actions" role="group" aria-label={prompt}>
           {options.map((option) => (
             <button
@@ -92,7 +88,6 @@ export function CommitGate({
     return (
       <div className="gate">
         <p>{prompt}</p>
-        {hint ? <p className="gate-hint">{hint}</p> : null}
         <div className="gate-actions">
           <button type="button" className="button" onClick={acknowledge}>
             I have committed — show me
@@ -105,7 +100,6 @@ export function CommitGate({
   return (
     <div className="gate">
       <p>{prompt}</p>
-      {hint ? <p className="gate-hint">{hint}</p> : null}
 
       {state.phase === 'asking' ? (
         <form
@@ -126,12 +120,8 @@ export function CommitGate({
               value={state.draft}
               onChange={(e) => dispatch({ type: 'draft', value: e.target.value })}
               placeholder="a number"
-              aria-describedby={`${inputId}-help`}
             />
           </label>
-          <p id={`${inputId}-help`} className="gate-hint">
-            A number. Fractions are fine — 1/2 and 0.5 are the same answer.
-          </p>
           <div className="gate-actions">
             <button
               type="submit"
