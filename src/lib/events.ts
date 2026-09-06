@@ -83,10 +83,10 @@ export type EventSink = (event: LearningEvent) => void;
  * The log and its sinks hang off a global, not off this module's scope.
  *
  * A module page carries more than one island — the beats, and the closing bank
- * and measurement — and the last of those reads back commitments made in the
- * first. Whether a bundler gives two islands one shared copy of this module or
- * two copies is its business, not something the calibration read-back should
- * depend on, so the store is keyed by symbol and shared either way.
+ * and measurement — and a reader's session runs across all of them. Whether a
+ * bundler gives two islands one shared copy of this module or two copies is its
+ * business, not something a future sink should have to reason about, so the
+ * store is keyed by symbol and shared either way.
  */
 interface EventStore {
   log: LearningEvent[];

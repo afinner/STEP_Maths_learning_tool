@@ -1,12 +1,5 @@
-import { useState } from 'react';
 import { MeasureItem } from '../../../components/measure/MeasureItem';
 import { AMPLIFIER_NAMES } from '../../../lib/amplifiers';
-import {
-  CONFIDENCE_LABELS,
-  commitFor,
-  revealFor,
-  type CommitEvent,
-} from '../../../lib/events';
 import {
   ALPHA,
   ORDER_ITEMS,
@@ -294,79 +287,6 @@ function DirectionOfError() {
   );
 }
 
-/** M3 — calibration. Their own commitments, read back. */
-function Calibration() {
-  // Read once, when the reader asks: the log fills up as they work down the page.
-  const [shown, setShown] = useState<CommitEvent[] | null>(null);
-
-  const read = () =>
-    setShown(
-      ['hook-limit', 'drop-alpha-squared']
-        .map((promptId) => commitFor(promptId))
-        .filter((event): event is CommitEvent => event !== undefined),
-    );
-
-  /**
-   * The first commitment was marked when it was made, so the verdict is read
-   * from the reveal event rather than marked a second time here. The second has
-   * no single right answer to reveal at the time — but the module spends a beat
-   * arguing that it depends, so that is the position it scores.
-   */
-  const verdictFor = (event: CommitEvent): 'right' | 'wrong' =>
-    (event.prompt_id === 'drop-alpha-squared'
-      ? event.response.startsWith('Depends')
-      : (revealFor(event.prompt_id)?.correct ?? false))
-      ? 'right'
-      : 'wrong';
-
-  return (
-    <section className="beat-panel" aria-labelledby="calibration-heading">
-      <h3 id="calibration-heading" className="panel-heading">
-        What you said on the way here
-      </h3>
-
-      {shown === null ? (
-        <div className="gate-actions">
-          <button type="button" className="button button-quiet" onClick={read}>
-            Show me what I committed to
-          </button>
-        </div>
-      ) : shown.length === 0 ? (
-        <p className="panel-note">Nothing committed yet — the page is still ahead of you.</p>
-      ) : (
-        <div className="table-scroll" tabIndex={0} role="group" aria-label="Your commitments">
-          <table className="data-table">
-            <caption>Your commitments, and how they turned out</caption>
-            <thead>
-              <tr>
-                <th scope="col">You said</th>
-                <th scope="col">How sure</th>
-                <th scope="col">Outcome</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((event) => (
-                <tr key={event.prompt_id}>
-                  <th scope="row">{event.response}</th>
-                  <td>{event.confidence ? CONFIDENCE_LABELS[event.confidence] : '—'}</td>
-                  <td className={verdictFor(event) === 'wrong' ? 'is-wrong' : undefined}>
-                    {verdictFor(event)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <p className="panel-note">
-        The gap between how sure you were and how right you were is the thing worth
-        tracking. It is also the only thing here that is not about this question.
-      </p>
-    </section>
-  );
-}
-
 export default function SmallEnoughToIgnoreClosing() {
   return (
     <div className="closing">
@@ -382,8 +302,6 @@ export default function SmallEnoughToIgnoreClosing() {
         <PreservesTheLimit />
         <DirectionOfError />
       </section>
-
-      <Calibration />
 
       <p className="takeaway">
         Look at what survives <em>before</em> you decide what to drop. If what survives

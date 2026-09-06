@@ -979,9 +979,6 @@ kbd {
   color: var(--ink-muted);
 }
 
-.data-table td.is-wrong {
-  color: var(--break);
-}
 
 /* The line the module ends on, unchanged from where it was introduced. */
 .takeaway {

@@ -18,8 +18,7 @@ export interface InlineCommitProps {
  *
  * The module-level gate lives in ModuleShell; this is the same object further
  * in. It emits the event so that no module has to remember to, which is what
- * makes the calibration read-back at the end possible without every beat
- * wiring itself up.
+ * keeps a reader's commitments in one log without every beat wiring itself up.
  */
 export function InlineCommit({
   beat,
