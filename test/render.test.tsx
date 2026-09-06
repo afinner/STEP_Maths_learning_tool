@@ -2,6 +2,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { LineChart, NumberLine, RunningValue } from '../src/components/charts';
 import FixtureWidget, { presets } from '../src/fixtures/fixture-module/widget';
+import SmallEnoughToIgnoreClosing from '../src/content/modules/small-enough-to-ignore/closing';
+import { Essence } from '../src/content/modules/small-enough-to-ignore/beats';
+import { hook } from '../src/content/modules/small-enough-to-ignore/compute';
+import SmallEnoughToIgnoreWidget, {
+  presets as moduleOnePresets,
+} from '../src/content/modules/small-enough-to-ignore/widget';
 
 /**
  * Smoke tests: the shared infrastructure actually renders.
@@ -99,5 +105,56 @@ describe('module shell', () => {
     // the conditions are readable but not yet clickable.
     expect((html.match(/disabled/g) ?? []).length).toBe(hypotheses.length);
     expect(html).toContain('Answer the question above');
+  });
+});
+
+describe('Module 01', () => {
+  const hypotheses = [
+    {
+      id: 'substitution-remains-defined',
+      statement: 'the substituted expression remains defined',
+      violatedBy: 'the leading coefficient vanishes',
+    },
+    {
+      id: 'discarded-effect-vanishes',
+      statement: 'the discarded effect vanishes',
+      violatedBy: 'a large factor restores the remainder',
+    },
+  ];
+
+  it('renders its real prediction gate and every diagnostic hypothesis', () => {
+    const html = renderToStaticMarkup(
+      <SmallEnoughToIgnoreWidget
+        hypotheses={hypotheses}
+        predictionPrompt="What does the expression approach?"
+      />,
+    );
+
+    expect(html).toContain('What does the expression approach?');
+    expect(html).toContain('Fractions are fine');
+    expect(Object.keys(moduleOnePresets).sort()).toEqual(hypotheses.map((h) => h.id).sort());
+    expect((html.match(/ledger-item/g) ?? []).length).toBe(hypotheses.length);
+  });
+
+  /**
+   * Section 7.1 keeps the choice of hook open, so swapping it has to stay a
+   * one-line change. Every string that names the expression comes from the
+   * active hook; if one is ever hardcoded again, this fails.
+   */
+  it('names whichever hook is active, rather than a hardcoded expression', () => {
+    const html = renderToStaticMarkup(<Essence n={100} />);
+
+    expect(html).toContain(hook.shortcutText);
+    expect(html).toContain(hook.cancellationText);
+    expect(html).not.toContain('√(n² + 1) − n');
+  });
+
+  it('renders the question bank, near transfer, and cross-context transfer checks', () => {
+    const html = renderToStaticMarkup(<SmallEnoughToIgnoreClosing />);
+
+    expect(html).toContain('Questions with the same mechanism');
+    expect(html).toContain('Where does first order fail here?');
+    expect(html).toContain('When does the shortcut preserve the limit?');
+    expect(html).not.toContain('Where truncating early is safe');
   });
 });

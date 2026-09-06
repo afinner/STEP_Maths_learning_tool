@@ -851,6 +851,27 @@ kbd {
   }
 }
 
+/* ---- Cross-context transfer --------------------------------------------- */
+.transfer-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.transfer-list li {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--rule-strong);
+}
+
+.transfer-shortcut {
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  color: var(--ink-muted);
+}
+
 /* ---- Closing: bank and measurement -------------------------------------- */
 .closing {
   display: grid;

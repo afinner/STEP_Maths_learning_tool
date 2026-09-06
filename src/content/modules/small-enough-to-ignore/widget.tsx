@@ -46,12 +46,12 @@ const initial: Params = {
 };
 
 export const presets: Record<string, Params> = {
-  // The denominator's first-order term is absent, not small.
-  'leading-term-survives': { ...initial, theta: DEGENERATE_THETA },
-  // Keep only O(1): both series retain nothing at all, and n - n is the same move.
-  'kept-terms-do-not-cancel': { ...initial, order: 0 },
-  // Push n out to a million: the dropped term shrinks, the product does not.
-  'dropped-term-is-not-amplified': { ...initial, n: 1_000_000 },
+  // Substitute zero at theta = 0 and the denominator you kept is not small but
+  // absent: the substituted expression is not defined there at all.
+  'substitution-remains-defined': { ...initial, theta: DEGENERATE_THETA },
+  // Push n out to a million: the discarded remainder shrinks without limit, and
+  // the factor of n outside restores it to full size every time.
+  'discarded-effect-vanishes': { ...initial, n: 1_000_000 },
 };
 
 /**
@@ -86,7 +86,7 @@ function HookTable() {
         <thead>
           <tr>
             <th scope="col">n</th>
-            <th scope="col">n(√(n² + 1) − n)</th>
+            <th scope="col">{hook.text}</th>
           </tr>
         </thead>
         <tbody>

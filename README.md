@@ -35,7 +35,7 @@ spec — one directory, four files, no other changes.
 | Path | What lives there |
 | --- | --- |
 | `src/schema.ts` | The module schema. One Zod object, used by every collection. |
-| `src/content/modules/<id>/` | One module: `index.md`, `widget.tsx`, `compute.ts`, `compute.test.ts`. |
+| `src/content/modules/<id>/` | One module: four required files, plus optional local presentation or closing files. |
 | `src/fixtures/<id>/` | The verification harness. Validated on every build, never published. |
 | `src/lib/collections.ts` | Which modules are published, and in what order. Drafts are excluded here. |
 | `src/layouts/ModuleLayout.astro` | The six beats, in fixed order, for every module. |

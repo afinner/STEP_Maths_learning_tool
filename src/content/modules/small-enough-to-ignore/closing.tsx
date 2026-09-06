@@ -15,9 +15,12 @@ import {
   degeneratePointsOf,
   formatLimit,
   hook,
+  TRANSFER_CASES,
   hookErrorDirection,
   marksReciprocalPoints,
+  marksTransferCases,
   parseOrderAnswer,
+  transferPreservesLimit,
 } from './compute';
 
 /**
@@ -38,13 +41,16 @@ function Domain() {
   return (
     <section className="beat-panel" aria-labelledby="domain-heading">
       <h3 id="domain-heading" className="panel-heading">
-        Where truncating early is safe
+        Why the habit survives
       </h3>
       <div className="prose">
         <p>
-          Wherever the leading coefficient of what survives is non-zero. For R that is
-          every θ except {failures.map((degrees) => `${degrees}°`).join(' and ')} and
-          their repeats — a set of measure zero. Truncation works almost everywhere.
+          Two things have to hold, and almost always both do: the expression you are
+          left with after substituting has to be defined where you are standing, and the
+          effect of what you discarded has to still vanish after everything you do to it
+          afterwards. For R the first fails only at θ ={' '}
+          {failures.map((degrees) => `${degrees}°`).join(' and ')} and their repeats — a
+          set of measure zero.
         </p>
         <p>
           Which is exactly why the habit survives. You will be right nearly every time
@@ -198,6 +204,61 @@ function LocateThePoint() {
   );
 }
 
+/**
+ * Cross-context transfer: four shortcuts of the same shape, in four different
+ * settings, where only the discarded effect separates them. Nothing here is the
+ * question the module worked through, so recall does not help.
+ */
+function PreservesTheLimit() {
+  const options = TRANSFER_CASES.map((item) => ({ id: item.id, label: item.text }));
+  const keep = TRANSFER_CASES.filter((item) => transferPreservesLimit(item));
+
+  return (
+    <>
+      <h4 className="measure-heading">When does the shortcut preserve the limit?</h4>
+      <p className="panel-note">
+        Each one replaces the small quantity by zero. Select every case where that still
+        gives the limit asked for.
+      </p>
+      <ol className="measure-list">
+        <MeasureItem
+          itemId="shortcut-preserves-limit"
+          question={
+            <ul className="transfer-list">
+              {TRANSFER_CASES.map((item) => (
+                <li key={item.id}>
+                  <span className="measure-expression">{item.text}</span>
+                  <span className="transfer-shortcut">{item.shortcutText}</span>
+                </li>
+              ))}
+            </ul>
+          }
+          input={{ kind: 'multi', options }}
+          mark={(response) => ({ correct: marksTransferCases(response) })}
+          explanation={
+            <>
+              <p>
+                {keep.map((item) => item.id).join(', ')} preserve the limit;{' '}
+                {TRANSFER_CASES.filter((item) => !transferPreservesLimit(item))
+                  .map((item) => item.id)
+                  .join(', ')}{' '}
+                does not.
+              </p>
+              <ul>
+                {TRANSFER_CASES.map((item) => (
+                  <li key={item.id}>
+                    <strong>{item.id}.</strong> {item.because}
+                  </li>
+                ))}
+              </ul>
+            </>
+          }
+        />
+      </ol>
+    </>
+  );
+}
+
 /** M4 — direction of the error, which separates the mechanism from the mantra. */
 function DirectionOfError() {
   const direction = hookErrorDirection();
@@ -209,10 +270,7 @@ function DirectionOfError() {
         <MeasureItem
           itemId="hook-error-direction"
           question={
-            <p>
-              Truncating too early in {hook.variableLatex}(√({hook.variableLatex}² + 1) −{' '}
-              {hook.variableLatex}) makes your answer:
-            </p>
+            <p>Truncating too early in {hook.text} makes your answer:</p>
           }
           input={{
             kind: 'choice',
@@ -321,6 +379,7 @@ export default function SmallEnoughToIgnoreClosing() {
         </h3>
         <OrderPrediction />
         <LocateThePoint />
+        <PreservesTheLimit />
         <DirectionOfError />
       </section>
 

@@ -147,9 +147,8 @@ export function ModuleShell<P extends object>({
           Break
         </h2>
         <p className="prose" style={{ marginBottom: 'var(--space-5)' }}>
-          The claim did not come with conditions attached, but it had them. Each one
-          below can be violated on its own — click it and the model above moves to a
-          case where it fails.
+          The claim did not come with conditions attached, but it had them. Select a
+          condition to move the model above to a case that exposes why it matters.
         </p>
 
         <HypothesisLedger

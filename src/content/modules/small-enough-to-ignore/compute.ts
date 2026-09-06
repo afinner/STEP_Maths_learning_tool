@@ -78,8 +78,14 @@ export function binomialCoefficient(alpha: number, k: number): number {
 
 export interface HookExpression {
   readonly id: string;
-  /** The expression itself, as KaTeX. */
+  /** The expression itself, as KaTeX, for anything rendered at build time. */
   readonly latex: string;
+  /** The same expression in plain text, for the island, which does not typeset. */
+  readonly text: string;
+  /** How the naive move is described: what gets rounded to what. */
+  readonly shortcutText: string;
+  /** What is left once the retained terms cancel, in the reader's words. */
+  readonly cancellationText: string;
   /** The variable the reader watches grow. */
   readonly variableLatex: string;
   readonly limit: number;
@@ -112,6 +118,9 @@ export interface HookExpression {
 const rootHook: HookExpression = {
   id: 'root-of-n-squared-plus-one',
   latex: 'n\\left(\\sqrt{n^{2}+1}-n\\right)',
+  text: 'n(√(n² + 1) − n)',
+  shortcutText: 'Rounding √(n² + 1) down to n',
+  cancellationText: 'n − n leaves nothing to carry the result',
   variableLatex: 'n',
   limit: 0.5,
   limitLatex: '\\tfrac{1}{2}',
@@ -140,6 +149,9 @@ const rootHook: HookExpression = {
 const compoundHook: HookExpression = {
   id: 'compound-interest',
   latex: '\\left(1+\\tfrac{1}{n}\\right)^{n}',
+  text: '(1 + 1/n)ⁿ',
+  shortcutText: 'Rounding 1 + 1/n down to 1',
+  cancellationText: '1 raised to any power leaves nothing to carry the result',
   variableLatex: 'n',
   limit: Math.E,
   limitLatex: 'e',
@@ -167,9 +179,13 @@ export const HOOKS: Readonly<Record<string, HookExpression>> = {
 };
 
 /**
- * §7 question 1 is open. This is the single parameter that settles it — change
- * this one line to swap the hook; nothing else in the module refers to either
- * expression by name.
+ * §7 question 1 is open, and this is the parameter that settles it.
+ *
+ * Every component reads the active hook through `hook`, including the strings it
+ * prints, so changing this line swaps the expression, its table, its captions
+ * and the measurement item together. One thing does not follow automatically:
+ * index.md is markdown and cannot interpolate, so `predictionPrompt` and the
+ * display maths in the body have to be edited by hand to match.
  */
 export const ACTIVE_HOOK_ID = rootHook.id;
 
@@ -356,7 +372,19 @@ export const ALPHA = 0.001;
 export const R_DECIMALS = 3;
 
 /* ------------------------------------------------------------------------- *
- * The decisive quantity
+ * Two different questions
+ *
+ * rho compares what a truncation retained against the leading thing it threw
+ * away. It answers the relative question: is the leading scale of the answer
+ * still present? It does not, on its own, answer whether a requested limit
+ * survives — at theta = pi/2 the first-order numerator is exactly zero, so rho
+ * is zero, and yet the limit is zero and the truncation reproduces it.
+ *
+ * The quantity that settles a requested limit is the discarded effect itself,
+ * E = |F - F_trunc|, measured after every later operation. Truncation preserves
+ * a finite limit when the substituted expression stays defined and E tends to
+ * zero. Both are computed here; the module keeps them apart deliberately,
+ * because conflating them is its own kind of false belief.
  * ------------------------------------------------------------------------- */
 
 export interface RhoPart {
@@ -373,12 +401,6 @@ export interface RhoReport {
   denominator: RhoPart;
   /** The smaller of the two: a truncation is only as good as its worse half. */
   binding: number;
-  /**
-   * Truncation is legitimate iff rho tends to infinity as alpha tends to zero.
-   * rho scales like 1/alpha whenever the retained terms survive, so the verdict
-   * turns on exactly one thing: whether what you kept is non-zero.
-   */
-  verdict: 'safe' | 'unsafe';
 }
 
 /** How far past the truncation to look for the leading discarded term. */
@@ -407,12 +429,19 @@ export function rho(theta: number, alpha: number, order: Order): RhoReport {
   const numerator = rhoFor('numerator', theta, alpha, order);
   const denominator = rhoFor('denominator', theta, alpha, order);
   const binding = Math.min(numerator.rho, denominator.rho);
-  return {
-    numerator,
-    denominator,
-    binding,
-    verdict: binding === 0 ? 'unsafe' : 'safe',
-  };
+  return { numerator, denominator, binding };
+}
+
+/**
+ * E = |F - F_trunc|: how far the truncated expression sits from the exact one,
+ * after everything that happens to it later. This is what decides whether a
+ * requested limit survives; watching it shrink as the small quantity shrinks is
+ * the check the module asks for. Null when either side is not a value, because
+ * a distance from a non-value is not a number.
+ */
+export function truncationError(exact: Estimate, truncated: Estimate): number | null {
+  if (!isValue(exact) || !isValue(truncated)) return null;
+  return Math.abs(exact.value - truncated.value);
 }
 
 /** The same ratio for the hook: what survives the cancellation, over what was lost. */
@@ -661,7 +690,7 @@ export const ORDER_ITEMS: readonly OrderItem[] = [
       return (3 * x) / (Math.sqrt(x * x + 3 * x) + x);
     },
     ordersPastLeading: 1,
-    because: 'The x terms cancel, so the answer sits in the next one.',
+    because: 'The x terms cancel, so the answer sits one power further on.',
   },
   {
     id: 'tan-minus-sin',
@@ -671,7 +700,8 @@ export const ORDER_ITEMS: readonly OrderItem[] = [
       return (Math.tan(x) - Math.sin(x)) / (x * x * x);
     },
     ordersPastLeading: 2,
-    because: 'Both expansions agree to first order, and the x³ terms are the first to differ.',
+    because:
+      'Both expansions agree at first order and the squared terms are absent from each, so the cubes are the first to differ — two powers past the leading one.',
   },
   {
     id: 'cos-quartic',
@@ -680,10 +710,96 @@ export const ORDER_ITEMS: readonly OrderItem[] = [
       const n = 100;
       return Math.pow(n, 4) * (Math.cos(1 / n) - 1 + 1 / (2 * n * n));
     },
-    ordersPastLeading: 3,
-    because: 'Two terms of the cosine are subtracted away by hand; the third survives.',
+    ordersPastLeading: 4,
+    because:
+      'Two terms of the cosine are cancelled by hand and the odd powers are absent, so the first surviving term is four powers past the leading one. The zero coefficients are still powers you have to pass.',
   },
 ];
+
+/**
+ * Cross-context transfer.
+ *
+ * Four shortcuts of the same shape — replace the small quantity by zero — where
+ * the reader has to say which ones keep the limit they were asked for. Nothing
+ * about the small quantity distinguishes them; what distinguishes them is
+ * whether the discarded effect still vanishes once everything later has been
+ * done to it. Each case computes both sides, so the key is derived rather than
+ * declared.
+ */
+export interface TransferCase {
+  id: string;
+  /** The expression, in plain text. */
+  text: string;
+  /** What substituting zero for the small quantity gives you. */
+  shortcutText: string;
+  /** Evaluated honestly at n. */
+  exact(n: number): number;
+  /** The value the shortcut returns — for these, independent of n. */
+  shortcut(n: number): number;
+  expectedLimit: number;
+  /** Why it does or does not survive, shown after the answer. */
+  because: string;
+}
+
+export const TRANSFER_CASES: readonly TransferCase[] = [
+  {
+    id: 'a',
+    text: '(3n² + 1) / (n² + 2) as n → ∞',
+    shortcutText: 'divide through by n² and drop the 1/n² terms',
+    exact: (n) => (3 * n * n + 1) / (n * n + 2),
+    shortcut: () => 3,
+    expectedLimit: 3,
+    because: 'Nothing later multiplies the discarded terms back up: the effect vanishes.',
+  },
+  {
+    id: 'b',
+    text: 'n(√(n² + 1) − n) as n → ∞',
+    shortcutText: 'round the root down to n',
+    exact: (n) => n / (Math.sqrt(n * n + 1) + n),
+    shortcut: () => 0,
+    expectedLimit: 0.5,
+    because:
+      'The factor of n outside multiplies the discarded remainder back to full size. The effect does not vanish, and the shortcut loses the whole answer.',
+  },
+  {
+    id: 'c',
+    text: '(n + 1) / (2n + 3) as n → ∞',
+    shortcutText: 'divide through by n and drop the 1/n terms',
+    exact: (n) => (n + 1) / (2 * n + 3),
+    shortcut: () => 0.5,
+    expectedLimit: 0.5,
+    because: 'The discarded terms are divided away rather than amplified.',
+  },
+  {
+    id: 'd',
+    text: 'sin(1/n) as n → ∞',
+    shortcutText: 'replace 1/n by zero',
+    exact: (n) => Math.sin(1 / n),
+    shortcut: () => 0,
+    expectedLimit: 0,
+    because:
+      'Here the shortcut and the limit agree at zero, and nothing afterwards magnifies the difference.',
+  },
+];
+
+/**
+ * Whether the shortcut lands on the limit. Read off the two computed values
+ * rather than asserted, so the key cannot drift from the maths.
+ */
+export function transferPreservesLimit(item: TransferCase, n = 1_000_000): boolean {
+  return Math.abs(item.shortcut(n) - item.expectedLimit) < 1e-6;
+}
+
+/** The key for the transfer item, in the exact form the widget submits. */
+export function transferAnswerKey(): string {
+  return canonicalSelection(
+    TRANSFER_CASES.filter((item) => transferPreservesLimit(item)).map((item) => item.id),
+  );
+}
+
+export function marksTransferCases(response: string): boolean {
+  return response === transferAnswerKey();
+}
 
 /**
  * The answer key for the transfer item, in the exact form the widget submits.
@@ -809,8 +925,15 @@ export function formatLarge(value: number, decimals: number = R_DECIMALS): strin
   return formatFixed(value, magnitude >= 1000 ? 0 : decimals);
 }
 
-/** What a reader sees in place of a value that does not exist. */
-export const INDETERMINATE_LABEL = 'indeterminate';
+/**
+ * What a reader sees in place of a value that does not exist.
+ *
+ * Not "indeterminate": the expression itself is perfectly determinate, and it is
+ * the approximation that has kept too little to report anything. Naming the
+ * approximation rather than the maths is the honest description, and it is the
+ * distinction the whole module turns on.
+ */
+export const INDETERMINATE_LABEL = 'approximation unavailable';
 
 export function formatEstimate(e: Estimate, decimals: number): string {
   return isValue(e) ? formatFixed(e.value, decimals) : INDETERMINATE_LABEL;
