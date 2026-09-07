@@ -393,6 +393,20 @@ kbd {
   color: var(--accent);
 }
 
+/* A control that chooses rather than sweeps. Same frame as the text inputs so a
+   row of controls reads as one row. */
+.control select {
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  color: var(--ink);
+  width: 100%;
+  max-width: 100%;
+}
+
 .control input[type='range'] {
   width: 100%;
   accent-color: var(--accent);

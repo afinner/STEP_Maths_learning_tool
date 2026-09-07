@@ -8,6 +8,10 @@ import { hook } from '../src/content/modules/small-enough-to-ignore/compute';
 import SmallEnoughToIgnoreWidget, {
   presets as moduleOnePresets,
 } from '../src/content/modules/small-enough-to-ignore/widget';
+import InequalitiesClosing from '../src/content/modules/operations-on-inequalities/closing';
+import InequalitiesWidget, {
+  presets as inequalityPresets,
+} from '../src/content/modules/operations-on-inequalities/widget';
 
 /**
  * Smoke tests: the shared infrastructure actually renders.
@@ -105,6 +109,47 @@ describe('module shell', () => {
     // the conditions are readable but not yet clickable.
     expect((html.match(/disabled/g) ?? []).length).toBe(hypotheses.length);
     expect(html).toContain('Answer the question above');
+  });
+});
+
+describe('Module 02', () => {
+  const hypotheses = [
+    {
+      id: 'multiplier-keeps-one-sign',
+      statement: 'the multiplier keeps one sign',
+      violatedBy: 'x - 2 changes sign at 2',
+    },
+    {
+      id: 'operation-preserves-order',
+      statement: 'the operation preserves order',
+      violatedBy: 'squaring reverses order between negatives',
+    },
+  ];
+
+  it('gates the count behind the commitment', () => {
+    const html = renderToStaticMarkup(
+      <InequalitiesWidget
+        hypotheses={hypotheses}
+        predictionPrompt="How many separate ranges?"
+      />,
+    );
+
+    expect(html).toContain('How many separate ranges?');
+    expect(Object.keys(inequalityPresets).sort()).toEqual(hypotheses.map((h) => h.id).sort());
+    // Neither solution set, nor the count, nor the read-back is served before the commit.
+    expect(html).not.toContain('3.50');
+    expect(html).not.toContain('You said');
+    expect(html).not.toContain('number line');
+  });
+
+  it('renders its measurement without a question bank', () => {
+    const html = renderToStaticMarkup(<InequalitiesClosing />);
+
+    expect(html).toContain('Where does the step turn round?');
+    expect(html).toContain('Which of these steps keep the solution set?');
+    expect(html).toContain('Which way did the error go?');
+    // The bank waits for real citations rather than shipping empty.
+    expect(html).not.toContain('Questions with the same mechanism');
   });
 });
 

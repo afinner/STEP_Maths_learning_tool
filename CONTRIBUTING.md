@@ -195,6 +195,17 @@ Two shared pieces support it:
 Do not time anything. These modules argue for pausing before you simplify, and
 measuring speed would contradict the content.
 
+### The amplifier vocabulary
+
+`src/lib/amplifiers.ts` names the mechanisms by which a discarded or mistreated
+term changes the answer — cancellation, multiplication, sign reversal, domain
+loss. It is shared on purpose: banks sort by mechanism rather than by topic, so
+a question from one module lands in the same drawer as a question from another.
+
+Add a mechanism when a module genuinely needs one that is not there, and add it
+to the shared list rather than keeping it local. Nothing breaks: groupings drop
+mechanisms with no entries, so existing modules are unaffected.
+
 ### Charts
 
 Import from `src/components/charts`. They take data and tokens, never colours:

@@ -43,6 +43,8 @@ spec — one directory, four files, no other changes.
 | `src/components/commit/` | The commit gate as a pure reducer, plus its UI. |
 | `src/components/measure/` | Auto-marked measurement items. |
 | `src/lib/events.ts` | Learner-event shapes and the in-memory log. No persistence. |
+| `src/lib/amplifiers.ts` | The shared vocabulary of mechanisms a module's bank sorts by. |
+| `src/lib/numbers.ts` | Number formatting shared by modules, free of KaTeX so islands can import it. |
 | `src/components/charts/` | Line chart, number line, running value. Built on d3-scale and d3-shape. |
 | `src/styles/tokens.css` | Every colour, size and spacing value in the site. |
 

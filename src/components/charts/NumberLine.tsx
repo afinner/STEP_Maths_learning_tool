@@ -33,12 +33,12 @@ export function NumberLine({
   marks = [],
   tickCount = 8,
   width = 640,
-  height = 120,
+  height = 170,
   ariaLabel,
   caption,
   xLabel,
 }: NumberLineProps) {
-  const m = { top: 28, right: 24, bottom: 34, left: 24 };
+  const m = { top: 66, right: 24, bottom: 34, left: 24 };
   const innerWidth = width - m.left - m.right;
   const axisY = height - m.bottom - m.top;
 
@@ -57,26 +57,33 @@ export function NumberLine({
         aria-label={ariaLabel}
       >
         <g transform={`translate(${m.left},${m.top})`}>
+          {/*
+            Two rows, one per tone, stacked above the line. Two sets of
+            intervals routinely cover the same stretch of it — a solution set
+            and the places a step disagrees with it, say — and drawn on the same
+            row the later one hides the earlier one and their labels land on top
+            of each other.
+          */}
           {intervals.map((iv, i) => {
             const from = Math.min(x(iv.from), x(iv.to));
             const to = Math.max(x(iv.from), x(iv.to));
-            const colour = iv.tone === 'break' ? 'var(--chart-2)' : 'var(--chart-1)';
+            const isBreak = iv.tone === 'break';
+            const colour = isBreak ? 'var(--chart-2)' : 'var(--chart-1)';
+            const top = axisY - (isBreak ? 50 : 20);
             return (
               <g key={`iv-${i}`}>
                 <rect
                   x={from}
-                  y={axisY - 16}
+                  y={top}
                   width={Math.max(1, to - from)}
-                  height={32}
-                  fill={
-                    iv.tone === 'break' ? 'var(--chart-band-break)' : 'var(--chart-band)'
-                  }
+                  height={16}
+                  fill={isBreak ? 'var(--chart-band-break)' : 'var(--chart-band)'}
                 />
                 <line
                   x1={from}
                   x2={to}
-                  y1={axisY}
-                  y2={axisY}
+                  y1={top + 8}
+                  y2={top + 8}
                   stroke={colour}
                   strokeWidth={3}
                 />
@@ -84,7 +91,7 @@ export function NumberLine({
                   <text
                     className="tick-label"
                     x={(from + to) / 2}
-                    y={axisY - 22}
+                    y={top - 5}
                     textAnchor="middle"
                     fill={colour}
                   >

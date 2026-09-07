@@ -1,5 +1,6 @@
 import { AMPLIFIERS, type Amplifier } from '../../../lib/amplifiers';
 import { canonicalSelection } from '../../../lib/selection';
+import { formatFixed } from '../../../lib/numbers';
 
 /**
  * Module 01 — Small enough to ignore.
@@ -863,18 +864,8 @@ export function toFraction(
  * Display
  * ------------------------------------------------------------------------- */
 
-/**
- * Fixed-decimal rendering, so a column of numbers lines up and can be compared.
- *
- * A value that rounds to zero is shown as zero, without a sign. The gradient at
- * the cusp on the negative x axis is tan(pi), which floats compute as -1.2e-16,
- * and "-0.000" reads as a quantity that is slightly negative rather than one
- * that is zero.
- */
-export function formatFixed(value: number, decimals: number): string {
-  const text = value.toFixed(decimals);
-  return /^-0(\.0+)?$/.test(text) ? text.slice(1) : text;
-}
+/** Shared with every module: see src/lib/numbers.ts. */
+export { formatFixed };
 
 const SUPERSCRIPTS: Readonly<Record<string, string>> = {
   '0': '\u2070',
