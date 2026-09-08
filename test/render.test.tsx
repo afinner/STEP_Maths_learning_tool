@@ -142,14 +142,19 @@ describe('Module 02', () => {
     expect(html).not.toContain('number line');
   });
 
-  it('renders its measurement without a question bank', () => {
+  it('renders its measurement and both halves of the bank', () => {
     const html = renderToStaticMarkup(<InequalitiesClosing />);
 
     expect(html).toContain('Where does the step turn round?');
     expect(html).toContain('Which of these steps keep the solution set?');
     expect(html).toContain('Which way did the error go?');
-    // The bank waits for real citations rather than shipping empty.
-    expect(html).not.toContain('Questions with the same mechanism');
+
+    // Traps sorted by mechanism, and the questions where the same rule is the
+    // tool rather than the hazard.
+    expect(html).toContain('Questions with the same mechanism');
+    expect(html).toContain('Where the same rule is the tool');
+    expect(html).toContain('STEP I 2001, Q2');
+    expect(html).toContain('STEP I 2011, Q8(a)');
   });
 });
 

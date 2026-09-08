@@ -33,8 +33,9 @@ boundary: Doing the same thing to both sides is sound whenever that thing is inc
 provenance: >-
   Written for this catalogue as the second module, taking up the
   operations-on-inequalities failure mode named in module 01's design notes. The
-  witnesses are constructed for the module: no examination question is
-  reproduced or cited here.
+  worked witnesses are constructed for the module; the bank cites STEP questions
+  by paper, year and number, paraphrased into this module's framing, and
+  reproduces no question text.
 added: 2026-09-07
 ---
 

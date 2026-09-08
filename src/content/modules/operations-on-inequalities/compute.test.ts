@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BANK,
   PRIMARY_WITNESS,
   STEP_CASES,
   WITNESSES,
   X_DECIMALS,
+  bankByAmplifier,
   casePreservesSolutions,
   disagreementSet,
   errorDirection,
@@ -14,6 +16,7 @@ import {
   marksSignChange,
   signChanges,
   marksStepCases,
+  principleQuestions,
   readingAt,
   solutionSet,
   stepCaseAnswerKey,
@@ -192,6 +195,79 @@ describe('the transfer item', () => {
     for (const item of STEP_CASES) {
       expect(workedThrough).not.toContain(item.original.text);
     }
+  });
+});
+
+describe('the bank', () => {
+  it('groups the traps by mechanism, not by topic', () => {
+    const groups = bankByAmplifier();
+    // Only mechanisms with entries appear, so extending the shared vocabulary
+    // never leaves an empty drawer on the page.
+    expect(groups.map((group) => group.amplifier)).toEqual(['sign-reversal', 'domain-loss']);
+    for (const group of groups) {
+      expect(group.entries.length).toBeGreaterThan(0);
+      for (const entry of group.entries) {
+        expect(entry.kind).toBe('trap');
+        expect(entry.amplifiers).toContain(group.amplifier);
+      }
+    }
+  });
+
+  it('lists a question driven by two mechanisms under both', () => {
+    const both = BANK.filter((entry) => entry.amplifiers.length === 2);
+    expect(both.length).toBeGreaterThan(0);
+    const groups = bankByAmplifier();
+    for (const entry of both) {
+      const appearances = groups.filter((group) =>
+        group.entries.some((each) => each.id === entry.id),
+      );
+      expect(appearances).toHaveLength(2);
+    }
+  });
+
+  it('keeps the questions where the principle is the tool in their own group', () => {
+    const principles = principleQuestions();
+    expect(principles.length).toBeGreaterThan(0);
+    for (const entry of principles) {
+      // A principle question has no amplifier: nothing is going wrong in it.
+      expect(entry.amplifiers).toEqual([]);
+      expect(entry.kind).toBe('principle');
+    }
+    // And none of them leaks into the trap groupings.
+    const traps = bankByAmplifier().flatMap((group) => group.entries.map((e) => e.id));
+    for (const entry of principles) expect(traps).not.toContain(entry.id);
+  });
+
+  it('cites every entry by paper, year and question', () => {
+    for (const entry of BANK) {
+      expect(entry.question).toMatch(/^(STEP I{1,2} \d{4}|1986 Specimen S1), Q/);
+      expect(entry.situation.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('says what each mechanism contributes, so no cell repeats another', () => {
+    for (const entry of BANK) {
+      if (entry.kind === 'principle') {
+        expect(entry.why.length).toBeGreaterThan(20);
+        continue;
+      }
+      // A trap listed under two mechanisms is there for two different reasons.
+      for (const amplifier of entry.amplifiers) {
+        expect(entry.why[amplifier]?.length ?? 0).toBeGreaterThan(20);
+      }
+      const reasons = entry.amplifiers.map((amplifier) => entry.why[amplifier]);
+      expect(new Set(reasons).size).toBe(reasons.length);
+      // ...and carries no reason for a mechanism it is not filed under.
+      expect(Object.keys(entry.why).sort()).toEqual([...entry.amplifiers].sort());
+    }
+  });
+
+  it('covers every entry exactly once between the two groups', () => {
+    const trapIds = new Set(
+      BANK.filter((entry) => entry.kind === 'trap').map((entry) => entry.id),
+    );
+    const principleIds = new Set(principleQuestions().map((entry) => entry.id));
+    expect(trapIds.size + principleIds.size).toBe(BANK.length);
   });
 });
 

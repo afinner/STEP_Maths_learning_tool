@@ -1,4 +1,4 @@
-import type { Amplifier } from '../../../lib/amplifiers';
+import { AMPLIFIERS, type Amplifier } from '../../../lib/amplifiers';
 import { canonicalSelection } from '../../../lib/selection';
 import { formatFixed } from '../../../lib/numbers';
 
@@ -296,6 +296,201 @@ export function tenthsToX(tenths: number): number {
 export function xToTenths(x: number): number {
   return Math.round(x * 10);
 }
+
+
+/* ------------------------------------------------------------------------- *
+ * The bank
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Two kinds of question, and the difference matters.
+ *
+ * In the first, order preservation is the trap: the step looks symmetric, the
+ * arithmetic is right, and the solution set moves. In the second it is the tool
+ * — the thing the question asks you to establish or to use on purpose. A reader
+ * who has only met the mechanism as a hazard has half of it.
+ *
+ * Every entry is a citation and a paraphrase. No question text is reproduced;
+ * see the standing rule in CONTRIBUTING.md.
+ */
+export type BankKind = 'trap' | 'principle';
+
+interface BankEntryBase {
+  id: string;
+  /** Paper, year and question, as a citation. */
+  question: string;
+  /** The mathematical situation, in this module's words. */
+  situation: string;
+}
+
+export interface TrapEntry extends BankEntryBase {
+  kind: 'trap';
+  amplifiers: readonly Amplifier[];
+  /**
+   * One line per mechanism, because a question listed under two of them is
+   * there for two different reasons and repeating one paragraph in both places
+   * says neither.
+   */
+  why: Readonly<Partial<Record<Amplifier, string>>>;
+}
+
+export interface PrincipleEntry extends BankEntryBase {
+  kind: 'principle';
+  amplifiers: readonly [];
+  /** What the question asks you to establish or to lean on. */
+  why: string;
+}
+
+export type BankEntry = TrapEntry | PrincipleEntry;
+
+export const BANK: readonly BankEntry[] = [
+  {
+    id: 'step1-2001-q2',
+    kind: 'trap',
+    question: 'STEP I 2001, Q2',
+    situation:
+      'Two inequalities to solve: a cubic against 2/x with x non-zero, and a comparison between two square roots.',
+    amplifiers: ['sign-reversal', 'domain-loss'],
+    why: {
+      'sign-reversal':
+        'This module twice over. The first part multiplies through by x, whose sign is unknown; the second squares twice, so order preservation has to be argued at each squaring rather than once.',
+      'domain-loss':
+        'Each root carries a domain the squared form forgets, and the first part excludes zero before any multiplying starts.',
+    },
+  },
+  {
+    id: 'step1-2003-q4',
+    kind: 'trap',
+    question: 'STEP I 2003, Q4',
+    situation: 'Solve (sin θ + 1)/cos θ ≤ 1 over a full period, with cos θ non-zero.',
+    amplifiers: ['sign-reversal', 'domain-loss'],
+    why: {
+      'sign-reversal':
+        'The same shape as the witness, but the multiplier changes sign twice inside the range, so the step runs one way on some arcs and the other way on the rest.',
+      'domain-loss':
+        'The two angles where the cosine vanishes are outside the original statement and inside the cleared one, which is where the extra ranges come from.',
+    },
+  },
+  {
+    id: 'specimen-1986-s1-q9',
+    kind: 'trap',
+    question: '1986 Specimen S1, Q9(i)',
+    situation: 'Solve |x + (x − 1)/(x + 1)| < 2.',
+    amplifiers: ['sign-reversal', 'domain-loss'],
+    why: {
+      'sign-reversal':
+        'A modulus stacked on a rational expression: the modulus splits the problem into cases with opposite order behaviour, and the expression inside changes sign as well.',
+      'domain-loss':
+        'One value of x is outside the statement altogether, and it sits in the middle of the region the cases are being argued over.',
+    },
+  },
+  {
+    id: 'step1-1995-q1',
+    kind: 'trap',
+    question: 'STEP I 1995, Q1(i) and (iii)',
+    situation: 'The same cubic inequality posed first in one variable and then in two.',
+    amplifiers: ['sign-reversal'],
+    why: {
+      'sign-reversal':
+        'The tempting reduction divides through by an odd power of the second variable, which changes sign with it. The same lesson as the witness, one dimension up, where it is much easier to miss.',
+    },
+  },
+  {
+    id: 'step2-2004-q2',
+    kind: 'trap',
+    question: 'STEP II 2004, Q2',
+    situation:
+      'Solve x² − α|x| + 2 < 0, then give the total length of the solution intervals.',
+    amplifiers: ['sign-reversal'],
+    why: {
+      'sign-reversal':
+        'The modulus splits the problem at zero into branches with opposite order behaviour. Self-marking, which is rare and worth using: drop a branch and the total length comes out visibly wrong, so the arithmetic reports the omission back to you.',
+    },
+  },
+  {
+    id: 'step2-1997-q8',
+    kind: 'principle',
+    question: 'STEP II 1997, Q8',
+    situation:
+      'Explain why one function being at least another on an interval means its integral is at least the other\u2019s, then use it.',
+    amplifiers: [],
+    why: 'This module\u2019s boundary, set as an examination instruction: integration is order-preserving, and the question asks you to say why before leaning on it.',
+  },
+  {
+    id: 'step1-2017-q2',
+    kind: 'principle',
+    question: 'STEP I 2017, Q2',
+    situation: 'An inequality integrated three times in succession.',
+    amplifiers: [],
+    why: 'Order survives each integration, but the direction has to be tracked as the interval flips. The rule used correctly, repeatedly, is the best practice there is for noticing when it is not.',
+  },
+  {
+    id: 'step2-2017-q6',
+    kind: 'principle',
+    question: 'STEP II 2017, Q6(ii)',
+    situation: 'A step that squares an inequality, licensed by both sides being non-negative.',
+    amplifiers: [],
+    why: 'The exact condition the squaring witness violates, stated as a permission rather than a warning.',
+  },
+  {
+    id: 'step2-2016-q4',
+    kind: 'principle',
+    question: 'STEP II 2016, Q4(i)',
+    situation: 'A step from A² ≥ B² to |A| ≥ |B|.',
+    amplifiers: [],
+    why: 'Squaring read backwards. It recovers the moduli and nothing more, which is precisely why the forward step loses the sign information it does.',
+  },
+  {
+    id: 'step1-2018-q2',
+    kind: 'principle',
+    question: 'STEP I 2018, Q2(i)',
+    situation: 'A step taking reciprocals of both sides.',
+    amplifiers: [],
+    why: 'Reciprocals reverse order between quantities of the same sign, and do something else entirely across zero. A third operation with the same character as the two the module works through.',
+  },
+  {
+    id: 'step1-2011-q8',
+    kind: 'principle',
+    question: 'STEP I 2011, Q8(a)',
+    situation:
+      'Show that one quantity is less than another exactly when a quadratic in n is positive.',
+    amplifiers: [],
+    why: 'The closest thing in the archive to the disagreement set: the question asks for the precise range on which the two statements agree, which is the same object this module measures.',
+  },
+];
+
+export interface BankGroup {
+  amplifier: Amplifier;
+  entries: readonly TrapEntry[];
+}
+
+/** Traps grouped by mechanism. A question driven by two appears under both. */
+export function bankByAmplifier(bank: readonly BankEntry[] = BANK): BankGroup[] {
+  return AMPLIFIERS.map((amplifier) => ({
+    amplifier,
+    entries: bank.filter(
+      (entry): entry is TrapEntry =>
+        entry.kind === 'trap' && entry.amplifiers.includes(amplifier),
+    ),
+  })).filter((group) => group.entries.length > 0);
+}
+
+/** The questions where order preservation is the tool rather than the hazard. */
+export function principleQuestions(bank: readonly BankEntry[] = BANK): PrincipleEntry[] {
+  return bank.filter((entry): entry is PrincipleEntry => entry.kind === 'principle');
+}
+
+/**
+ * What is behind a bank citation.
+ *
+ * Paper, year and question number, and nothing else: these are references to
+ * work from, and the module has no verified link to give for them. Adding links
+ * later means saying what is behind each one — an official paper and a worked
+ * solution are different objects to hand somebody who is about to attempt the
+ * question.
+ */
+export const BANK_CITATION_NOTE =
+  'Cited by paper, year and question number. No links: these are questions to work, and a link to a worked solution is a different thing from a link to a paper.';
 
 /* ------------------------------------------------------------------------- *
  * Measurement

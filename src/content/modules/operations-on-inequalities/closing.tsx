@@ -1,14 +1,18 @@
 import { MeasureItem } from '../../../components/measure/MeasureItem';
+import { AMPLIFIER_NAMES } from '../../../lib/amplifiers';
 import {
+  BANK_CITATION_NOTE,
   MULTIPLIER_ITEMS,
   PRIMARY_WITNESS,
   STEP_CASES,
+  bankByAmplifier,
   casePreservesSolutions,
   errorDirection,
   formatFixed,
   marksErrorDirection,
   marksSignChange,
   marksStepCases,
+  principleQuestions,
   signChanges,
 } from './compute';
 
@@ -16,9 +20,9 @@ import {
  * What follows the six beats: items that measure whether the mechanism landed
  * rather than whether the worked example was remembered.
  *
- * There is no question bank yet. The catalogue's standing rule forbids inventing
- * examination provenance, so the bank waits for real citations rather than
- * shipping as an empty section.
+ * The bank is in two halves, because order preservation appears in the papers
+ * in two roles: as the trap, and as the tool. A reader who has only met it as a
+ * hazard has half of it.
  *
  * Nothing here is timed.
  */
@@ -41,6 +45,92 @@ function Domain() {
           you can check once — it is a question with a different answer in different places. That
           is a small target, and examination questions are written to put you on it.
         </p>
+        <p>
+          They are also written to make you use it deliberately. Integration preserves order;
+          squaring preserves it between non-negatives; taking reciprocals reverses it between
+          quantities of the same sign. Each of those is a licence rather than a warning, and the
+          second half of the bank below is questions that ask you to state one and then lean on
+          it. Knowing where the rule holds is the same knowledge as knowing where it breaks.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------- *
+ * The bank
+ * -------------------------------------------------------------------------- */
+
+function Bank() {
+  const groups = bankByAmplifier();
+  const principles = principleQuestions();
+
+  return (
+    <section className="beat-panel" aria-labelledby="bank-heading">
+      <h3 id="bank-heading" className="panel-heading">
+        Questions with the same mechanism
+      </h3>
+      <p className="panel-note">
+        Sorted by how the step goes wrong, not by topic. Sorting by topic would teach you to
+        recognise fractions and moduli, which is the habit this module exists to break.
+      </p>
+      <p className="panel-note bank-warning">{BANK_CITATION_NOTE}</p>
+
+      {groups.map((group) => (
+        <div
+          className="table-scroll"
+          key={group.amplifier}
+          tabIndex={0}
+          role="group"
+          aria-label={`${AMPLIFIER_NAMES[group.amplifier]} questions`}
+        >
+          <table className="data-table">
+            <caption>{AMPLIFIER_NAMES[group.amplifier]}</caption>
+            <thead>
+              <tr>
+                <th scope="col">Question</th>
+                <th scope="col">What it asks</th>
+                <th scope="col">Where the step turns round</th>
+              </tr>
+            </thead>
+            <tbody>
+              {group.entries.map((entry) => (
+                <tr key={`${group.amplifier}-${entry.id}`}>
+                  <th scope="row">{entry.question}</th>
+                  <td>{entry.situation}</td>
+                  <td>{entry.why[group.amplifier]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+
+      <h4 className="measure-heading">Where the same rule is the tool</h4>
+      <p className="panel-note">
+        Not traps. In each of these the question asks you to establish an order-preserving step,
+        or to use one on purpose — which is the other half of having the idea.
+      </p>
+      <div className="table-scroll" tabIndex={0} role="group" aria-label="Order preservation used deliberately">
+        <table className="data-table">
+          <caption>Order preservation as the tool</caption>
+          <thead>
+            <tr>
+              <th scope="col">Question</th>
+              <th scope="col">What it asks</th>
+              <th scope="col">What it turns on</th>
+            </tr>
+          </thead>
+          <tbody>
+            {principles.map((entry) => (
+              <tr key={entry.id}>
+                <th scope="row">{entry.question}</th>
+                <td>{entry.situation}</td>
+                <td>{entry.why}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );
@@ -181,6 +271,7 @@ export default function OperationsOnInequalitiesClosing() {
   return (
     <div className="closing">
       <Domain />
+      <Bank />
 
       <section className="beat-panel" aria-labelledby="measure-heading">
         <h3 id="measure-heading" className="panel-heading">
