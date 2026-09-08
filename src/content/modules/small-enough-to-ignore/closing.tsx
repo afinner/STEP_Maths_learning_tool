@@ -1,3 +1,4 @@
+import { BankAttempt } from '../../../components/bank/BankAttempt';
 import { MeasureItem } from '../../../components/measure/MeasureItem';
 import { AMPLIFIER_NAMES } from '../../../lib/amplifiers';
 import {
@@ -74,6 +75,11 @@ function Bank() {
         module exists to break.
       </p>
       <p className="panel-note bank-warning">{BANK_LINK_NOTE}</p>
+      <p className="panel-note">
+        Say how each one went if you want it recorded beside the question. It stays on
+        this page for as long as the page is open: nothing is stored, nothing is scored,
+        and nothing is timed.
+      </p>
 
       {groups.map((group) => (
         <div
@@ -89,6 +95,7 @@ function Bank() {
               <tr>
                 <th scope="col">Question</th>
                 <th scope="col">Why ρ collapses</th>
+                <th scope="col">How it went</th>
               </tr>
             </thead>
             <tbody>
@@ -101,6 +108,13 @@ function Bank() {
                     <span className="bank-slot">{entry.slot}</span>
                   </th>
                   <td>{entry.why[group.amplifier]}</td>
+                  <td className="bank-attempt-cell">
+                    <BankAttempt
+                      questionId={entry.id}
+                      amplifier={group.amplifier}
+                      question={entry.question}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>

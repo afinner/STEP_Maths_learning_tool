@@ -922,6 +922,29 @@ kbd {
   color: var(--ink-faint);
 }
 
+/* ---- Bank: the reader's own account of an attempt ---------------------- */
+.bank-attempt {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.bank-attempt-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--size-xs);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.bank-attempt-cell {
+  vertical-align: top;
+}
+
 .measure-heading {
   font-family: var(--font-ui);
   font-size: var(--size-base);

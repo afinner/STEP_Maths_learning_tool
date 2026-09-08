@@ -60,6 +60,17 @@ export interface BankAttemptEvent {
   self_reported_outcome: 'got-it' | 'got-there-slowly' | 'stuck';
 }
 
+export type AttemptOutcome = BankAttemptEvent['self_reported_outcome'];
+
+/** Offered in the order the specification lists them. */
+export const OUTCOMES: readonly AttemptOutcome[] = ['got-it', 'got-there-slowly', 'stuck'];
+
+export const OUTCOME_LABELS: Readonly<Record<AttemptOutcome, string>> = {
+  'got-it': 'Got it',
+  'got-there-slowly': 'Got there slowly',
+  stuck: 'Stuck',
+};
+
 /** An auto-marked measurement item. */
 export interface MeasureEvent {
   type: 'measure';
@@ -134,6 +145,41 @@ export function commits(): readonly CommitEvent[] {
 
 export function commitFor(promptId: string): CommitEvent | undefined {
   return commits().find((event) => event.prompt_id === promptId);
+}
+
+/**
+ * How a bank question went, in the reader's own account of it.
+ *
+ * Self-reported because nothing in a bank is marked and nothing anywhere is
+ * timed: the only honest source for how an attempt went is the person who made
+ * it. Saying so again replaces the earlier account rather than counting as a
+ * second attempt, which is why `attemptFor` reads the last one.
+ */
+export function recordAttempt(
+  questionId: string,
+  amplifier: Amplifier,
+  outcome: AttemptOutcome,
+): void {
+  emit({
+    type: 'bank_attempt',
+    question_id: questionId,
+    amplifier,
+    self_reported_outcome: outcome,
+  });
+}
+
+/**
+ * What the reader last said about a question, wherever they said it. A question
+ * filed under two mechanisms is one question, so the drawer it was marked in
+ * does not change the answer read back in the other.
+ */
+export function attemptFor(questionId: string): BankAttemptEvent | undefined {
+  return store()
+    .log.filter(
+      (event): event is BankAttemptEvent =>
+        event.type === 'bank_attempt' && event.question_id === questionId,
+    )
+    .at(-1);
 }
 
 /** How a commitment turned out, where the module marked it at the time. */

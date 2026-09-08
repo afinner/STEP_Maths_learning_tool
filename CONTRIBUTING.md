@@ -196,6 +196,10 @@ Two shared pieces support it:
   number, a choice or a multiple selection. It emits the `measure` event. The
   answer key lives in `compute.ts`, never in the component, so the marking is
   covered by the module's own tests.
+- `src/components/bank/BankAttempt.tsx` — one bank row's self-report, emitting
+  the `bank_attempt` event. Self-reported because nothing in a bank is marked;
+  it takes the entry id and the mechanism drawer it sits in, and a question
+  filed under two mechanisms reads back the same answer in both.
 - `src/lib/events.ts` — the event shapes. `commitFor()` and `revealFor()` read
   back what the learner committed to earlier on the page, which is what a
   calibration read-back is made of. Nothing is persisted; a sink registers with

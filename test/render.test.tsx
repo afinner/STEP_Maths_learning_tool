@@ -199,6 +199,24 @@ describe('Module 01', () => {
     expect(html).not.toContain('√(n² + 1) − n');
   });
 
+  it('offers a self-report on every bank row, and says nothing back about it', () => {
+    const html = renderToStaticMarkup(<SmallEnoughToIgnoreClosing />);
+
+    // One control per rendered row — including the second appearance of a
+    // question filed under two mechanisms, which is a row a reader can mark.
+    const rows = (html.match(/class="bank-attempt-cell"/g) ?? []).length;
+    expect(rows).toBeGreaterThan(0);
+    expect((html.match(/class="bank-attempt"/g) ?? []).length).toBe(rows);
+    expect((html.match(/type="radio"/g) ?? []).length).toBe(rows * 3);
+
+    expect(html).toContain('Got there slowly');
+    expect(html).toContain('Stuck');
+    // Nothing is marked here, so nothing congratulates, ranks or counts — and
+    // the page says as much rather than leaving the reader to wonder.
+    expect(html).not.toMatch(/well done|great work|nice work|congratulat|streak|badge/i);
+    expect(html).toContain('nothing is scored');
+  });
+
   it('renders the question bank, near transfer, and cross-context transfer checks', () => {
     const html = renderToStaticMarkup(<SmallEnoughToIgnoreClosing />);
 

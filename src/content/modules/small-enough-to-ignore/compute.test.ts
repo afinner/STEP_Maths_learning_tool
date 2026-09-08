@@ -267,15 +267,20 @@ describe('witness table: theta = 0', () => {
 
 describe('witness table: theta = pi/3', () => {
   /**
-   * REPORTED DISCREPANCY (spec §2 beat 5c, first column).
+   * RESOLVED (spec §2 beat 5c, first column).
    *
-   * The spec shows -0.51068 at alpha = 0.1 and -0.57068 at alpha = 0.01. The
-   * closed form gives -0.51250 and -0.57070. The spec's four cells are instead
-   * reproduced by the linearisation of the closed form, -[cot(theta) -
-   * (alpha/2)csc^2(theta)] — see the test below, which pins that diagnosis.
+   * The spec's first two cells were -0.51068 and -0.57068 where the closed form
+   * gives -0.51250 and -0.57070, because that column is the linearisation of
+   * the closed form in alpha, -[cot(theta) - (alpha/2)csc^2(theta)], rather
+   * than the closed form itself.
    *
-   * Neither side has been adjusted. These assertions are the oracle's values;
-   * the discrepancy is with the author.
+   * The page shows the closed form. It is R by definition — checked against the
+   * difference quotient at the top of this file — and the linearisation is an
+   * approximation to it that is already wrong in the third decimal at
+   * alpha = 0.1. The second test below keeps the diagnosis, because it is this
+   * module's own subject turning up in its own specification: a first-order
+   * expansion trusted one order too early, at the very point where the reader
+   * is being told that truncating is safe.
    */
   const expected: readonly [alpha: number, decimals: number, shown: string][] = [
     [0.1, 5, '-0.51250'],
@@ -294,13 +299,22 @@ describe('witness table: theta = pi/3', () => {
     expect(formatFixed(settled, 4)).toBe('-0.5774');
   });
 
-  it('the spec cells are the linearisation of the closed form', () => {
+  it('the superseded cells are that linearisation, and what it costs', () => {
     const linearised = (theta: number, alpha: number) =>
       -(cot(theta) - (alpha / 2) / Math.sin(theta) ** 2);
-    const specCells = ['-0.51068', '-0.57068', '-0.57668', '-0.57728'];
+    const supersededCells = ['-0.51068', '-0.57068', '-0.57668', '-0.57728'];
     WITNESS_ALPHAS.forEach((alpha, i) => {
-      expect(formatFixed(linearised(SAFE_THETA, alpha), 5)).toBe(specCells[i]);
+      expect(formatFixed(linearised(SAFE_THETA, alpha), 5)).toBe(supersededCells[i]);
     });
+
+    // What the missing order is worth at the largest alpha on the page: enough
+    // to move the third decimal, and nowhere near enough to be visible in the
+    // verdict, which is why a table of this kind can be wrong quietly.
+    const gap = Math.abs(
+      valueOr(rExact(SAFE_THETA, 0.1), NaN) - linearised(SAFE_THETA, 0.1),
+    );
+    expect(gap).toBeGreaterThan(1e-3);
+    expect(gap).toBeLessThan(1e-2);
   });
 });
 
