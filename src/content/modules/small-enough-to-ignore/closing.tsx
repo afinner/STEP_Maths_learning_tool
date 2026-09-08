@@ -100,7 +100,7 @@ function Bank() {
                     </a>
                     <span className="bank-slot">{entry.slot}</span>
                   </th>
-                  <td>{entry.why}</td>
+                  <td>{entry.why[group.amplifier]}</td>
                 </tr>
               ))}
             </tbody>

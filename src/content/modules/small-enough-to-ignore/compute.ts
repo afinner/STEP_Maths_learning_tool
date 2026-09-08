@@ -518,8 +518,14 @@ export interface BankEntry {
   /** Paper and question, as a citation. No question text appears anywhere. */
   question: string;
   amplifiers: readonly Amplifier[];
-  /** Why rho collapses, in one line. */
-  why: string;
+  /**
+   * Why rho collapses, one line per mechanism.
+   *
+   * A question filed under two mechanisms is there for two different reasons,
+   * and one paragraph repeated in both drawers says neither of them. Keying the
+   * reason to the mechanism is what makes the second appearance worth reading.
+   */
+  why: Readonly<Partial<Record<Amplifier, string>>>;
   paper: string;
 }
 
@@ -539,7 +545,7 @@ export const BANK: readonly BankEntry[] = [
     slot: 'Worked',
     question: '2024 STEP 3, Q2(ii)(a)',
     amplifiers: ['cancellation'],
-    why: 'The leading terms cancel exactly, and what is left under the root decides the answer. The cheapest example in the bank: start here.',
+    why: { cancellation: 'The leading terms cancel exactly, and what is left under the root decides the answer. The cheapest example in the bank: start here.' },
     paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
   },
   {
@@ -547,7 +553,7 @@ export const BANK: readonly BankEntry[] = [
     slot: 'Worked',
     question: '2022 STEP 3, Q6',
     amplifiers: ['cancellation'],
-    why: 'The leading coefficient vanishes at the one point the question asks about — the witness worked through above.',
+    why: { cancellation: 'The leading coefficient vanishes at the one point the question asks about — the witness worked through above.' },
     paper: 'https://step.maths.org/sites/default/files/2023-06/2022STEP3Mock.pdf',
   },
   {
@@ -555,7 +561,7 @@ export const BANK: readonly BankEntry[] = [
     slot: 'Closer',
     question: '2024 STEP 3, Q11(iii)–(iv)',
     amplifiers: ['cancellation'],
-    why: 'The term you would discard is the entire answer. Simplify it away and the question evaporates.',
+    why: { cancellation: 'The term you would discard is the entire answer. Simplify it away and the question evaporates.' },
     paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
   },
   {
@@ -563,7 +569,12 @@ export const BANK: readonly BankEntry[] = [
     slot: 'Try',
     question: '2023 STEP 3, Q2(iv)',
     amplifiers: ['cancellation', 'multiplication'],
-    why: 'Two different orders in one expression, because one term is amplified by k and another by k². Sketch the region first: the contradiction only lands if the picture is yours.',
+    why: {
+      cancellation:
+        'Substitute α = 0 and both parts of the area vanish, so you report zero for a region you sketched two parts earlier and watched grow with k. The whole area sits in what the substitution threw away. Sketch the region first: the contradiction only lands if the picture is yours.',
+      multiplication:
+        'α is not free — the intersection ties it to k — and the discarded terms come back multiplied by k and by k². One of them survives at first order in α and the other only at second, so a single choice of order is right for one term and wrong for the other.',
+    },
     paper: 'https://step.maths.org/sites/default/files/2025-02/2023STEP3Mock.pdf',
   },
   {
@@ -571,7 +582,12 @@ export const BANK: readonly BankEntry[] = [
     slot: 'Try',
     question: '2021 STEP 2, Q6(iii)–(iv)',
     amplifiers: ['cancellation', 'multiplication'],
-    why: 'A ratio that tends to 1/(1 − cos α), which is order one rather than small.',
+    why: {
+      cancellation:
+        'Two widths are each much smaller than the radius, which says nothing about how they compare with each other: their ratio tends to 1/(1 − cos α), which is order one. The distance saved contains their difference, so dropping one against the other is wrong by a factor rather than by a little.',
+      multiplication:
+        'The angle you have just proved is much less than 1 arrives multiplied by the radius, which is large. It carries as much of the distance saved as the difference of widths does — small next to R is not small once R multiplies it.',
+    },
     paper: 'https://step.maths.org/sites/default/files/2023-06/STEP_2_2021_Mock_0.pdf',
   },
   {
@@ -579,7 +595,7 @@ export const BANK: readonly BankEntry[] = [
     slot: 'Try',
     question: '2024 STEP 2, Q11(iv)',
     amplifiers: ['multiplication'],
-    why: 'The expansion is in pk, not in p, so the approximation is excellent at one group size and nonsense at another. Find the size where it breaks.',
+    why: { multiplication: 'The expansion is in pk, not in p, so the approximation is excellent at one group size and nonsense at another. Find the size where it breaks.' },
     paper: 'https://step.maths.org/sites/default/files/2025-06/STEP2_2024_Mock.pdf',
   },
   {
@@ -587,7 +603,7 @@ export const BANK: readonly BankEntry[] = [
     slot: 'Stretch',
     question: '2024 STEP 3, Q3',
     amplifiers: ['multiplication'],
-    why: 'A threshold that naive limiting cannot see at all.',
+    why: { multiplication: 'A threshold that naive limiting cannot see at all.' },
     paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
   },
 ];

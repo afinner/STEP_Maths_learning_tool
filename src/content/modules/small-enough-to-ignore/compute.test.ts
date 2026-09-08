@@ -501,7 +501,20 @@ describe('the bank', () => {
     for (const entry of BANK) {
       expect(entry.question).toMatch(/^\d{4} STEP [23], Q/);
       expect(entry.paper).toMatch(/^https:\/\/step\.maths\.org\/.+\.pdf$/);
-      expect(entry.why.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('says what each mechanism contributes, so no cell repeats another', () => {
+    for (const entry of BANK) {
+      // A question filed under both mechanisms is there for two different
+      // reasons; the same paragraph in both drawers would say neither.
+      for (const amplifier of entry.amplifiers) {
+        expect(entry.why[amplifier]?.length ?? 0).toBeGreaterThan(20);
+      }
+      const reasons = entry.amplifiers.map((amplifier) => entry.why[amplifier]);
+      expect(new Set(reasons).size).toBe(reasons.length);
+      // ...and carries no reason for a mechanism it is not filed under.
+      expect(Object.keys(entry.why).sort()).toEqual([...entry.amplifiers].sort());
     }
   });
 
