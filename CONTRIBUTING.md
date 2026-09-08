@@ -42,7 +42,16 @@ setup.
 Where a citation carries a link, **say what is behind it**. A link to an official
 past paper and a link to a worked paper containing full solutions are different
 objects, and a reader following a bank link to work a question needs to know
-which one they are about to open.
+which one they are about to open. The STEP question database entry —
+`https://step.maths.org/questions/<code>`, with codes like `04-s2-q2` — is
+usually the right target: it carries the paper and links onward to solutions
+without putting the answer one click from the question. Check each link resolves
+before shipping it, and check the citation against the database's own naming
+while you are there.
+
+Cite only what you can describe. If all you have is a question's topic keywords,
+list it as further reading with the topics attributed to the database, rather
+than writing a note about a question nobody has read.
 
 The rule is about the words, not the mathematics: results, standard identities
 and the reasoning are not anyone's copyright, and a module is free to work

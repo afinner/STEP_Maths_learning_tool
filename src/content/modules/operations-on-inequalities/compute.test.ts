@@ -10,18 +10,22 @@ import {
   disagreementSet,
   errorDirection,
   formatIntervals,
+  LENGTH_ITEM,
   MULTIPLIER_ITEMS,
   intervalsWhere,
   marksErrorDirection,
   marksSignChange,
   signChanges,
   marksStepCases,
+  marksTotalLength,
   principleQuestions,
   readingAt,
   solutionSet,
   stepCaseAnswerKey,
+  solutionLength,
   stepIsSound,
   tenthsToX,
+  totalLength,
   witnessById,
   xToTenths,
   type Witness,
@@ -268,6 +272,35 @@ describe('the bank', () => {
     );
     const principleIds = new Set(principleQuestions().map((entry) => entry.id));
     expect(trapIds.size + principleIds.size).toBe(BANK.length);
+  });
+});
+
+describe('the total-length item', () => {
+  it('adds up the branches the statement actually has', () => {
+    // |x| between 2 and 3, so two intervals of length one on either side of zero.
+    expect(solutionLength(LENGTH_ITEM.original, LENGTH_ITEM.domain)).toBeCloseTo(2, 9);
+  });
+
+  it('is visibly short when a branch is dropped', () => {
+    const truth = solutionLength(LENGTH_ITEM.original, LENGTH_ITEM.domain);
+    const dropped = solutionLength(LENGTH_ITEM.naive, LENGTH_ITEM.domain);
+    expect(dropped).toBeCloseTo(1, 9);
+    // Self-marking: the shortfall is exactly the branch that went missing.
+    expect((truth as number) - (dropped as number)).toBeCloseTo(1, 9);
+  });
+
+  it('marks the total rather than the shortfall', () => {
+    expect(marksTotalLength(LENGTH_ITEM, '2')).toBe(true);
+    expect(marksTotalLength(LENGTH_ITEM, '2.0')).toBe(true);
+    expect(marksTotalLength(LENGTH_ITEM, '1')).toBe(false);
+    expect(marksTotalLength(LENGTH_ITEM, 'two')).toBe(false);
+  });
+
+  it('refuses to give a total length to an unbounded set', () => {
+    // The witness's solution set runs off both ends of its window.
+    const unbounded = solutionSet(PRIMARY_WITNESS.original, PRIMARY_WITNESS.domain);
+    expect(totalLength(unbounded)).toBeNull();
+    expect(solutionLength(PRIMARY_WITNESS.original, PRIMARY_WITNESS.domain)).toBeNull();
   });
 });
 

@@ -321,6 +321,8 @@ interface BankEntryBase {
   question: string;
   /** The mathematical situation, in this module's words. */
   situation: string;
+  /** The question's entry in the STEP database, which carries the paper. */
+  link: string;
 }
 
 export interface TrapEntry extends BankEntryBase {
@@ -346,6 +348,7 @@ export type BankEntry = TrapEntry | PrincipleEntry;
 export const BANK: readonly BankEntry[] = [
   {
     id: 'step1-2001-q2',
+    link: 'https://step.maths.org/questions/01-s1-q2',
     kind: 'trap',
     question: 'STEP I 2001, Q2',
     situation:
@@ -360,6 +363,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step1-2003-q4',
+    link: 'https://step.maths.org/questions/03-s1-q4',
     kind: 'trap',
     question: 'STEP I 2003, Q4',
     situation: 'Solve (sin θ + 1)/cos θ ≤ 1 over a full period, with cos θ non-zero.',
@@ -373,6 +377,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'specimen-1986-s1-q9',
+    link: 'https://step.maths.org/questions/spec-s1-q9',
     kind: 'trap',
     question: '1986 Specimen S1, Q9(i)',
     situation: 'Solve |x + (x − 1)/(x + 1)| < 2.',
@@ -386,6 +391,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step1-1995-q1',
+    link: 'https://step.maths.org/questions/95-s1-q1',
     kind: 'trap',
     question: 'STEP I 1995, Q1(i) and (iii)',
     situation: 'The same cubic inequality posed first in one variable and then in two.',
@@ -397,6 +403,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step2-2004-q2',
+    link: 'https://step.maths.org/questions/04-s2-q2',
     kind: 'trap',
     question: 'STEP II 2004, Q2',
     situation:
@@ -409,6 +416,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step2-1997-q8',
+    link: 'https://step.maths.org/questions/97-s2-q8',
     kind: 'principle',
     question: 'STEP II 1997, Q8',
     situation:
@@ -418,6 +426,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step1-2017-q2',
+    link: 'https://step.maths.org/questions/17-s1-q2',
     kind: 'principle',
     question: 'STEP I 2017, Q2',
     situation: 'An inequality integrated three times in succession.',
@@ -426,6 +435,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step2-2017-q6',
+    link: 'https://step.maths.org/questions/17-s2-q6',
     kind: 'principle',
     question: 'STEP II 2017, Q6(ii)',
     situation: 'A step that squares an inequality, licensed by both sides being non-negative.',
@@ -434,6 +444,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step2-2016-q4',
+    link: 'https://step.maths.org/questions/16-s2-q4',
     kind: 'principle',
     question: 'STEP II 2016, Q4(i)',
     situation: 'A step from A² ≥ B² to |A| ≥ |B|.',
@@ -442,6 +453,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step1-2018-q2',
+    link: 'https://step.maths.org/questions/18-s1-q2',
     kind: 'principle',
     question: 'STEP I 2018, Q2(i)',
     situation: 'A step taking reciprocals of both sides.',
@@ -450,6 +462,7 @@ export const BANK: readonly BankEntry[] = [
   },
   {
     id: 'step1-2011-q8',
+    link: 'https://step.maths.org/questions/11-s1-q8',
     kind: 'principle',
     question: 'STEP I 2011, Q8(a)',
     situation:
@@ -490,7 +503,63 @@ export function principleQuestions(bank: readonly BankEntry[] = BANK): Principle
  * question.
  */
 export const BANK_CITATION_NOTE =
-  'Cited by paper, year and question number. No links: these are questions to work, and a link to a worked solution is a different thing from a link to a paper.';
+  'Each link is the question\u2019s entry in the STEP database, which carries the paper itself and onward links to worked solutions. Follow one expecting the question, not the answer.';
+
+/**
+ * Further questions in the same family, listed and nothing more.
+ *
+ * The module has not worked these through, and the database entries carry topic
+ * keywords rather than the questions themselves, so there is no honest note to
+ * write about what each one does with order preservation. They are here because
+ * a reader who has run out of the annotated ones should know they exist — with
+ * the topics the database itself gives, and no claim beyond that.
+ */
+export interface FurtherQuestion {
+  id: string;
+  question: string;
+  /** The topics the STEP question database files it under. */
+  topics: string;
+  link: string;
+}
+
+export const FURTHER_QUESTIONS: readonly FurtherQuestion[] = [
+  {
+    id: '91-s1-q9',
+    question: 'STEP I 1991, Q9',
+    topics: 'Sums, inequalities, approximation',
+    link: 'https://step.maths.org/questions/91-s1-q9',
+  },
+  {
+    id: '02-s3-q4',
+    question: 'STEP III 2002, Q4',
+    topics: 'Number theory, differences of cubes, sums of squares',
+    link: 'https://step.maths.org/questions/02-s3-q4',
+  },
+  {
+    id: '93-s2-q8',
+    question: 'STEP II 1993, Q8',
+    topics: 'The arithmetic-geometric mean inequality, induction',
+    link: 'https://step.maths.org/questions/93-s2-q8',
+  },
+  {
+    id: '15-s2-q1',
+    question: 'STEP II 2015, Q1',
+    topics: 'Differentiation, infinite series, logarithms',
+    link: 'https://step.maths.org/questions/15-s2-q1',
+  },
+  {
+    id: '12-s1-q3',
+    question: 'STEP I 2012, Q3',
+    topics: 'Integration, curve sketching, tangents, exponentials',
+    link: 'https://step.maths.org/questions/12-s1-q3',
+  },
+  {
+    id: '90-s1-q9',
+    question: 'STEP I 1990, Q9',
+    topics: 'Coordinate geometry, intersections, areas',
+    link: 'https://step.maths.org/questions/90-s1-q9',
+  },
+];
 
 /* ------------------------------------------------------------------------- *
  * Measurement
@@ -542,6 +611,67 @@ export function marksSignChange(item: MultiplierItem, response: string): boolean
   const answer = Number(response.trim());
   if (!Number.isFinite(answer)) return false;
   return signChanges(item).some((point) => Math.abs(point - answer) < 0.05);
+}
+
+/**
+ * Total length of the solution set.
+ *
+ * The property worth stealing from 2004 S2 Q2: ask for the total length and the
+ * arithmetic marks itself. A reader who drops a branch does not get a wrong
+ * shape that has to be checked against a graph — they get a number that is
+ * visibly, quantifiably short, and the size of the shortfall is the size of what
+ * they lost.
+ *
+ * The statement here is the module's own, not the examination's.
+ */
+export interface LengthItem {
+  id: string;
+  text: string;
+  /** The step that loses a branch, and what it leaves. */
+  naiveText: string;
+  original: Inequality;
+  naive: Inequality;
+  domain: readonly [number, number];
+}
+
+export const LENGTH_ITEM: LengthItem = {
+  id: 'total-length',
+  text: 'x² − 5|x| + 6 < 0',
+  naiveText: 'treating |x| as x, giving x² − 5x + 6 < 0',
+  original: {
+    text: 'x² − 5|x| + 6 < 0',
+    verdict: (x) => compare(x * x - 5 * Math.abs(x) + 6, 0, (a, b) => a < b),
+  },
+  naive: {
+    text: 'x² − 5x + 6 < 0',
+    verdict: (x) => compare(x * x - 5 * x + 6, 0, (a, b) => a < b),
+  },
+  domain: [-8, 8],
+};
+
+/**
+ * The total length of a set of intervals, or null when one of them runs off the
+ * window — an unbounded set has no total length, and reporting a window-sized
+ * number for it would be a lie the reader could not see.
+ */
+export function totalLength(intervals: readonly Interval[]): number | null {
+  if (intervals.some((interval) => interval.fromClipped || interval.toClipped)) return null;
+  return intervals.reduce((sum, interval) => sum + (interval.to - interval.from), 0);
+}
+
+export function solutionLength(
+  inequality: Inequality,
+  domain: readonly [number, number],
+): number | null {
+  return totalLength(solutionSet(inequality, domain));
+}
+
+/** Marked against the computed total, to a tenth. */
+export function marksTotalLength(item: LengthItem, response: string): boolean {
+  const answer = Number(response.trim());
+  const truth = solutionLength(item.original, item.domain);
+  if (!Number.isFinite(answer) || truth === null) return false;
+  return Math.abs(truth - answer) < 0.05;
 }
 
 export interface StepCase {

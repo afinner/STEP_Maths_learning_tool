@@ -2,6 +2,8 @@ import { MeasureItem } from '../../../components/measure/MeasureItem';
 import { AMPLIFIER_NAMES } from '../../../lib/amplifiers';
 import {
   BANK_CITATION_NOTE,
+  FURTHER_QUESTIONS,
+  LENGTH_ITEM,
   MULTIPLIER_ITEMS,
   PRIMARY_WITNESS,
   STEP_CASES,
@@ -12,8 +14,10 @@ import {
   marksErrorDirection,
   marksSignChange,
   marksStepCases,
+  marksTotalLength,
   principleQuestions,
   signChanges,
+  solutionLength,
 } from './compute';
 
 /**
@@ -96,7 +100,11 @@ function Bank() {
             <tbody>
               {group.entries.map((entry) => (
                 <tr key={`${group.amplifier}-${entry.id}`}>
-                  <th scope="row">{entry.question}</th>
+                  <th scope="row">
+                    <a href={entry.link} rel="noopener" target="_blank">
+                      {entry.question}
+                    </a>
+                  </th>
                   <td>{entry.situation}</td>
                   <td>{entry.why[group.amplifier]}</td>
                 </tr>
@@ -124,7 +132,11 @@ function Bank() {
           <tbody>
             {principles.map((entry) => (
               <tr key={entry.id}>
-                <th scope="row">{entry.question}</th>
+                <th scope="row">
+                  <a href={entry.link} rel="noopener" target="_blank">
+                    {entry.question}
+                  </a>
+                </th>
                 <td>{entry.situation}</td>
                 <td>{entry.why}</td>
               </tr>
@@ -132,6 +144,22 @@ function Bank() {
           </tbody>
         </table>
       </div>
+      <h4 className="measure-heading">Further questions in the same family</h4>
+      <p className="panel-note">
+        Listed and nothing more: this module has not worked these through, and the database
+        entries carry topic keywords rather than the questions themselves, so what follows is
+        how the database files each one and not a claim about what it does with order.
+      </p>
+      <ul className="further-list">
+        {FURTHER_QUESTIONS.map((entry) => (
+          <li key={entry.id}>
+            <a href={entry.link} rel="noopener" target="_blank">
+              {entry.question}
+            </a>
+            <span className="further-topics">{entry.topics}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -228,6 +256,43 @@ function WhichStepsAreSound() {
   );
 }
 
+/**
+ * Total length: the property worth stealing from the bank's self-marking
+ * question. Drop a branch and the number is visibly short by exactly what was
+ * lost, so the arithmetic reports the omission rather than hiding it.
+ */
+function TotalLength() {
+  const truth = solutionLength(LENGTH_ITEM.original, LENGTH_ITEM.domain);
+  const dropped = solutionLength(LENGTH_ITEM.naive, LENGTH_ITEM.domain);
+
+  return (
+    <>
+      <h4 className="measure-heading">What is the total length of the solution set?</h4>
+      <p className="panel-note">
+        Solve it, then add up the lengths of the ranges you found. One number.
+      </p>
+      <ol className="measure-list">
+        <MeasureItem
+          itemId="total-length"
+          question={<p className="measure-expression">{LENGTH_ITEM.text}</p>}
+          input={{ kind: 'number', label: 'Total length', placeholder: 'a length' }}
+          mark={(response) => ({ correct: marksTotalLength(LENGTH_ITEM, response) })}
+          explanation={
+            <p>
+              {formatFixed(truth ?? 0, 0)}. The modulus splits the statement at zero into two
+              ranges of equal length, one either side. {LENGTH_ITEM.naiveText.charAt(0).toUpperCase()}
+              {LENGTH_ITEM.naiveText.slice(1)} keeps only the right-hand one and gives{' '}
+              {formatFixed(dropped ?? 0, 0)} — short by exactly the branch that went missing.
+              That is what makes a question worth asking this way: the number tells you something
+              is gone without anyone having to mark it.
+            </p>
+          }
+        />
+      </ol>
+    </>
+  );
+}
+
 /** Which way the error went: separates the mechanism from "watch out for negatives". */
 function DirectionOfError() {
   const witness = PRIMARY_WITNESS;
@@ -279,6 +344,7 @@ export default function OperationsOnInequalitiesClosing() {
         </h3>
         <WhereItTurns />
         <WhichStepsAreSound />
+        <TotalLength />
         <DirectionOfError />
       </section>
 

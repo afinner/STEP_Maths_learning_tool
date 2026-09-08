@@ -858,6 +858,26 @@ kbd {
   }
 }
 
+/* ---- Further reading ----------------------------------------------------- */
+.further-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+}
+
+.further-list li {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.further-topics {
+  color: var(--ink-faint);
+  font-size: var(--size-xs);
+}
+
 /* ---- Cross-context transfer --------------------------------------------- */
 .transfer-list {
   list-style: none;
