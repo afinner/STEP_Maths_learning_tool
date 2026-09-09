@@ -314,6 +314,12 @@ kbd {
   margin-bottom: var(--space-4);
 }
 
+.byline {
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  color: var(--ink-faint);
+}
+
 .module-list {
   list-style: none;
   padding: 0;
