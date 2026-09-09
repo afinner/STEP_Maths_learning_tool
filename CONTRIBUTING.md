@@ -1,6 +1,7 @@
 # Adding a module
 
-A module is one false belief. Adding one means creating one directory with four
+A module is one false belief — one that held up until a question was built on
+the place it fails. Adding one means creating one directory with four
 required files in it and running the build. Nothing else in the repository has to change:
 no route, no registry, no navigation entry, no index update.
 
@@ -83,7 +84,7 @@ document and the code ever disagree.
 | `decisiveQuantity` | `{ symbol, name, description }` | The one number that settles it. `symbol` is KaTeX (rendered at build time), `name` is human, `description` says which way it has to go for the claim to survive. |
 | `repairedIntuition` | string | The corrected mental model — still a picture, not a theorem statement. |
 | `boundary` | string | One sentence: when the original move **is** valid. |
-| `provenance` | string | What prompted this: the specific paper, question, or lesson. |
+| `provenance` | string | What prompted this: the specific paper, question, or lesson where the belief showed itself. |
 | `added` | date `YYYY-MM-DD` | Sorts the index. |
 | `draft` | boolean, optional | `true` while the module is being built. Omit it entirely once published. |
 

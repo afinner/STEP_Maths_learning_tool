@@ -1,10 +1,13 @@
 # Failure modes
 
-An interactive catalogue of specific false beliefs in mathematical reasoning.
+Interactive modules built from the maths concepts I found I had only half
+understood while working STEP questions.
 
-Each module names one false belief, gives a concrete case where it produces a
-wrong answer, and identifies the single quantity that decides when it fails. It
-is a reference, not a course: it is complete at any size, and it grows slowly.
+Each one names a single belief — the kind that is close enough to right to
+survive every question until one is built on the place it fails — gives a
+concrete case where it produces a wrong answer, and identifies the single
+quantity that decides when it fails. It is a reference, not a course: it is
+complete at any size, and it grows slowly.
 
 **Live site:** https://afinner.github.io/STEP_Maths_learning_tool/
 
