@@ -1,4 +1,11 @@
-import { ModuleShell, type WidgetHostProps } from '../../../components/ModuleShell';
+import {
+  BreakChips,
+  ExploreShell,
+  Panel,
+  Readout,
+  type ReadoutItem,
+  type WidgetHostProps,
+} from '../../../components/explore';
 import {
   CONFIGURATIONS,
   INITIAL_PARAMS,
@@ -12,66 +19,53 @@ import {
 } from './compute';
 
 /**
- * Module 03 — Arguing from the figure.
+ * Module 03 — Arguing from the figure. Draft.
  *
- * The reader is asked which single step of the isosceles proof is false, commits
- * to a number, and is then shown the configuration the figure was hiding. The
- * answer is computed from where A stands, never written down: the false step
- * moves from one addition to the other as A crosses the line of symmetry.
+ * Stage A: the construction, and which step it kills. The answer is computed
+ * from where A stands, never written down: the false step moves from one
+ * addition to the other as A crosses the line of symmetry. The figure itself,
+ * and the controls that move A by hand, are still to come.
  */
 
 export const presets: Readonly<Record<string, Params>> = CONFIGURATIONS;
 
-/** What the argument gets wrong where the reader is first standing. */
-const falseStepAtStart = theFalseStep(apex(INITIAL_PARAMS));
-
-function Readout({ params }: { params: Params }) {
+function readout(params: Params): ReadoutItem[] {
   const a = apex(params);
   const figure = trueFigure(a);
 
   if (!isFigure(figure)) {
-    return (
-      <div className="widget-readout" aria-live="polite">
-        <p>
-          AB and AC are equal here, so the bisector of angle A and the perpendicular
-          bisector of BC are the same line. There is no single P to speak of, and the
-          argument fails at step {failingSteps(a).join(', ')}.
-        </p>
-      </div>
-    );
+    return [
+      {
+        term: 'the construction',
+        value: 'AB = AC: the two lines coincide',
+        tone: 'indeterminate',
+        text: true,
+        note: `no single P is determined, so the argument fails at step ${failingSteps(a).join(', ')}`,
+      },
+    ];
   }
 
-  return (
-    <div className="widget-readout" aria-live="polite">
-      <p>
-        <span className="term">σ at F, on AB</span>
-        <span className="value">{formatSigma(figure.f.sigma)}</span>
-      </p>
-      <p>
-        <span className="term">σ at G, on AC</span>
-        <span className="value">{formatSigma(figure.g.sigma)}</span>
-      </p>
-      <p>
-        The false step is step <strong>{theFalseStep(a)}</strong>.
-      </p>
-    </div>
-  );
+  return [
+    { term: 'A', value: `(${a.x.toFixed(1)}, ${a.y.toFixed(1)})` },
+    { term: 'σ at F, on AB', value: formatSigma(figure.f.sigma), tone: figure.f.sigma < 0 ? 'broken' : 'plain' },
+    { term: 'σ at G, on AC', value: formatSigma(figure.g.sigma), tone: figure.g.sigma < 0 ? 'broken' : 'plain' },
+    { term: 'the false step', value: `step ${theFalseStep(a)}`, tone: 'decisive', text: true },
+  ];
 }
 
 export default function ArguingFromTheFigureWidget(props: WidgetHostProps) {
   return (
-    <ModuleShell
-      {...props}
-      initial={INITIAL_PARAMS}
-      presets={presets}
-      commit={{
-        mode: 'numeric-with-confidence',
-        beat: 2,
-        promptId: 'false-step',
-        ...(falseStepAtStart === null ? {} : { target: falseStepAtStart }),
-      }}
-    >
-      {(params) => <Readout params={params} />}
-    </ModuleShell>
+    <ExploreShell {...props} initial={INITIAL_PARAMS} presets={presets}>
+      {(params) => (
+        <Panel
+          id="figure-panel"
+          title="Where A stands, and which step fails"
+          lead="Draft. The signed betweenness σ at each foot decides which addition in the argument is false."
+        >
+          <Readout items={readout(params)} />
+          <BreakChips />
+        </Panel>
+      )}
+    </ExploreShell>
   );
 }

@@ -1,0 +1,23 @@
+---
+/**
+ * The heading every section of a module page opens with: a number, a name, and
+ * at most one line saying what the section is for. The number is the reader's
+ * map of the page; the same five appear in the same order on every module.
+ */
+interface Props {
+  id: string;
+  index: string;
+  name: string;
+  lead?: string;
+}
+
+const { id, index, name, lead } = Astro.props;
+---
+
+<header class="section-head">
+  <span class="section-index" aria-hidden="true">{index}</span>
+  <div>
+    <h2 class="section-name" id={`${id}-name`}>{name}</h2>
+    {lead ? <p class="section-lead">{lead}</p> : null}
+  </div>
+</header>

@@ -1,15 +1,18 @@
 ---
 id: arguing-from-the-figure
 title: Arguing from the figure
+summary: A proof that every triangle is isosceles, in which every congruence is true and one step reads a fact off the drawing.
 claim: The figure I drew is the general case. My argument is about the objects, not the picture.
 context: STEP
 hypotheses:
   - id: feet-lie-within-the-sides
+    label: Move A off centre
     statement: Each perpendicular foot lies between the two ends of the side it is on.
     violatedBy: >-
       Move A off the line of symmetry and one foot passes its vertex, so that
       side is the difference of the two pieces rather than their sum.
   - id: the-construction-meets-once
+    label: Make AB = AC
     statement: >-
       The bisector of angle A and the perpendicular bisector of BC meet at
       exactly one point.
@@ -17,11 +20,11 @@ hypotheses:
       Make AB and AC equal and the two lines are the same line, so every point
       on it satisfies both conditions and no single P is determined.
   - id: p-lies-where-it-is-drawn
+    label: Flatten the triangle
     statement: P lies inside the triangle, where the figure puts it.
     violatedBy: >-
       P is the midpoint of the arc BC on the far side of the circle through the
       three vertices, so it is below BC for every triangle that has one.
-predictionPrompt: Exactly one step in this argument is false. Which number?
 decisiveQuantity:
   symbol: '\sigma = \min(t,\,1-t)'
   name: signed betweenness

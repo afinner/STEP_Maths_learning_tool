@@ -1,50 +1,70 @@
 ---
 id: small-enough-to-ignore
 title: Small enough to ignore
-claim: If a quantity is heading to zero, I can replace it with zero. Simplify first, take the limit afterwards.
+summary: A term that is heading to zero gets replaced by zero — and takes the answer with it.
+claim: If a quantity is heading to zero, I can replace it with zero, simplify, and take the limit afterwards.
 context: STEP
 hypotheses:
-  - id: substitution-remains-defined
-    statement: Replacing the small quantity by zero leaves a defined expression at the point of interest.
-    violatedBy: >-
-      At θ = 0 the denominator's first-order term is −α sin θ, which is not small
-      but absent. The term you discarded is the whole denominator.
   - id: discarded-effect-vanishes
-    statement: After every later operation, the effect of the discarded remainder still tends to zero.
+    label: Push n to a million
+    statement: The effect of what you discarded still tends to zero after everything that happens to it later.
     violatedBy: >-
-      A remainder of order 1/n meets a factor of n and arrives at the same size
+      A remainder of size 1/2n meets a factor of n and arrives at the same size
       as the answer, however large n gets.
-predictionPrompt: As n gets large, what does n(√(n² + 1) − n) approach?
+  - id: substitution-remains-defined
+    label: Stand at θ = 0
+    statement: After the small quantity is replaced by zero, the expression is still defined at the point you care about.
+    violatedBy: >-
+      At θ = 0 the first-order denominator is −α sin 0, which is not small but
+      absent. What you kept is 0/0.
 decisiveQuantity:
-  symbol: E=|F-F_{\mathrm{trunc}}|
-  name: discarded effect
+  symbol: 'E=\bigl|F-F_{\mathrm{trunc}}\bigr|'
+  name: the discarded effect
   description: >-
-    The absolute difference between the original expression and the truncated
-    one, after every later operation. For a finite requested limit, replacing the
-    small term preserves it when both expressions remain defined and E tends to zero.
-    The secondary ratio ρ measures the stronger question of retained relative
-    or leading-order information.
+    How far the truncated expression sits from the true one, measured after every
+    later operation. The shortcut preserves a limit exactly when the truncated
+    expression is still defined there and E tends to zero.
 repairedIntuition: >-
-  First ask what information you need. To preserve only a finite limit, track
-  whether the discarded contribution still tends to zero after every later operation.
-  To preserve leading-order or relative information, compare the remainder with
-  the first term that survives and expand until that scale is visible.
-boundary: For a finite requested limit, replacing a small quantity by zero preserves it when the resulting expression stays defined and the total discarded effect tends to zero; preserving leading-order information requires the stronger relative comparison measured by ρ.
+  Look at what survives before deciding what to drop. The size of a term is not
+  a property of the term; it is a comparison with whatever it is about to be
+  added to, multiplied by, or divided by. If what you kept cancels, or vanishes
+  at your point, the term you dropped was the leading one.
+boundary: >-
+  Replacing a small quantity by zero is safe when the result is still defined
+  and nothing afterwards multiplies, divides or cancels against it at the same
+  order — which is most of the time, and exactly why the habit survives.
+question:
+  citation: STEP III 2022, Q6
+  link: https://step.maths.org/sites/default/files/2023-06/2022STEP3Mock.pdf
+  behind: full solutions and the examiner's report, in the STEP Support Programme's worked paper
 provenance: >-
-  2022 STEP 3 Q6, with 2024 STEP 3 Q2(ii)(a) as the opening witness. Both are
-  paraphrased into this module's framing; the bank links to the STEP Support
-  Programme's worked papers, which carry the questions and full solutions.
+  STEP III 2022, Q6, where both the ratio and the rolling circle come from, with
+  STEP III 2024, Q2(ii)(a) as the simplest example of the same mechanism. Both
+  are paraphrased into this module's framing; no question text is reproduced.
 added: 2026-08-15
 ---
 
-Two expressions, each containing a quantity heading to zero.
+What is
 
-$$n\left(\sqrt{n^{2}+1}-n\right) \qquad\text{and}\qquad R(\theta,\alpha)=\frac{\sin(\theta+\alpha)-\sin\theta}{\cos(\theta+\alpha)-\cos\theta}$$
+$$
+\lim_{n\to\infty}\, n\left(\sqrt{n^{2}+1}-n\right)\,?
+$$
 
-In the first, $1$ is genuinely negligible beside $n^{2}$, and judging so is
-correct. In the second, $\alpha$ is as small as you like and the $\alpha^{2}$
-terms are smaller still. Both invite the same move: drop the small thing, then
-take the limit.
+The quick argument runs like this. When $n$ is large, the $1$ under the root is
+nothing beside $n^{2}$, so $\sqrt{n^{2}+1}\approx\sqrt{n^{2}}=n$. The bracket is
+$n-n=0$, and $n\times 0=0$. The limit is $0$.
 
-Whether that move keeps the answer you were asked for is the question below. It
-is not a question about how small the small thing is.
+Here is what the expression actually does.
+
+| $n$ | $n\left(\sqrt{n^{2}+1}-n\right)$ |
+| --- | --- |
+| 1 | 0.4142136 |
+| 10 | 0.4987562 |
+| 100 | 0.4999875 |
+| 1 000 | 0.4999999 |
+| 1 000 000 | 0.5000000 |
+
+It is $\tfrac12$. Every sentence in the quick argument was true: the $1$ *is*
+negligible beside $n^{2}$, and $\sqrt{n^{2}+1}-n$ *does* go to zero. The
+estimate was fine. What went wrong is what happened to it next: the piece
+thrown away was about $1/2n$, and the very next step multiplied it by $n$.

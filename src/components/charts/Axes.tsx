@@ -74,7 +74,7 @@ export function Axes({
       {yLabel ? (
         <text
           className="axis-title"
-          transform={`translate(${-42},0) rotate(-90)`}
+          transform={`translate(${-48},0) rotate(-90)`}
           textAnchor="end"
         >
           {yLabel}

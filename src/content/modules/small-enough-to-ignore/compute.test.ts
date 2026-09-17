@@ -1,56 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalSelection } from '../../../lib/selection';
 import {
-  ALPHA,
-  BANK,
-  BANK_LINK_NOTE,
+  ALPHAS,
   DEGENERATE_THETA,
   HOOK_TABLE_N,
+  N_SLIDER,
   ORDERS,
-  ORDER_ITEMS,
   SAFE_THETA,
-  THETA_MAX_DEGREES,
-  THETA_MIN_DEGREES,
-  TRANSFER_CASES,
+  THETA_INDEX,
   WITNESS_ALPHAS,
-  bankByAmplifier,
-  degeneratePointsOf,
-  marksReciprocalPoints,
-  reciprocalPointsKey,
-  degreesToRadians,
+  alphaAt,
+  dominanceHalfWidth,
   formatEstimate,
   formatFixed,
   formatLarge,
-  formatLimit,
   formatReadout,
   formatRho,
   formatSmall,
+  formatWindowTheta,
   hook,
-  hookErrorDirection,
-  hookRho,
+  hookError,
+  hookSweep,
   isDegenerate,
   isValue,
-  indeterminate as indeterminateOf,
-  nearestDegenerateTheta,
+  nFromSlider,
   rExact,
   rFromDefinition,
   rTruncated,
-  radiansToDegrees,
-  rho,
+  rhoDenominator,
   seriesCoefficient,
-  thetaSweep,
-  toFraction,
+  termSizes,
+  thetaFromIndex,
   truncationError,
-  transferAnswerKey,
-  transferPreservesLimit,
   valueOr,
+  windowSweep,
   type Order,
 } from './compute';
 
 /**
  * The closed form -cot(theta + alpha/2) is the oracle. Every truncation, every
- * table and every value of rho is checked against it rather than against a
- * number someone typed in.
+ * table and every readout is checked against it rather than against a number
+ * someone typed in.
  */
 
 const cot = (x: number) => Math.cos(x) / Math.sin(x);
@@ -71,6 +60,12 @@ describe('the closed form is the definition', () => {
   it('is -cot(theta + alpha/2)', () => {
     expect(valueOr(rExact(SAFE_THETA, 0.1), NaN)).toBeCloseTo(-cot(SAFE_THETA + 0.05), 12);
   });
+
+  it('has its pole at theta = -alpha/2, not at zero', () => {
+    expect(rExact(-0.05, 0.1)).toEqual({ kind: 'indeterminate', reason: 'divergent' });
+    expect(isValue(rExact(0, 0.1))).toBe(true);
+    expect(valueOr(rExact(0, 0.1), NaN)).toBeCloseTo(-cot(0.05), 12);
+  });
 });
 
 describe('truncated expansions', () => {
@@ -78,14 +73,11 @@ describe('truncated expansions', () => {
     for (const theta of ORDINARY_THETAS) {
       expect(seriesCoefficient('numerator', theta, 0)).toBe(0);
       expect(seriesCoefficient('denominator', theta, 0)).toBe(0);
-      expect(rTruncated(theta, 0.1, 0)).toEqual({
-        kind: 'indeterminate',
-        reason: 'nothing-retained',
-      });
+      expect(rTruncated(theta, 0.1, 0)).toEqual({ kind: 'indeterminate', reason: 'nothing-retained' });
     }
   });
 
-  it('reproduce the first-order coefficients of the two series', () => {
+  it('reproduce the first two coefficients of the two series', () => {
     for (const theta of ORDINARY_THETAS) {
       expect(seriesCoefficient('numerator', theta, 1)).toBeCloseTo(Math.cos(theta), 12);
       expect(seriesCoefficient('denominator', theta, 1)).toBeCloseTo(-Math.sin(theta), 12);
@@ -102,55 +94,20 @@ describe('truncated expansions', () => {
 
   /**
    * The orders come in pairs, which is a property of this expression and not an
-   * accident of the arithmetic.
-   *
-   * Writing h = alpha/2, the exact value is -(cos - sin tan h)/(sin + cos tan h)
-   * once the common factor of cos h is divided out. Truncating at second order
-   * is that expression with tan h replaced by h; at third order it is tan h
-   * replaced by h + (2/3)h^3. Since tan h = h + h^3/3, the two truncations sit
-   * the same distance from the exact value on opposite sides. So the second
-   * order buys two powers of alpha, and the third buys none.
-   *
-   * The test checks the rate rather than a tolerance, so it is a test of the
-   * expansion and not of one lucky value.
+   * accident of the arithmetic: the second order buys two powers of alpha, and
+   * the third buys none. The test checks the rate rather than a tolerance.
    */
   it.each(ORDINARY_THETAS)('gain two orders at second order at theta = %f', (theta) => {
     const errorAt = (alpha: number, order: Order) =>
       Math.abs(valueOr(rTruncated(theta, alpha, order), NaN) - valueOr(rExact(theta, alpha), NaN));
-
-    // Rates are asymptotic, so they are measured where the next correction is
-    // negligible: at alpha = 0.01 the second-order correction still moves the
-    // first-order ratio by a percent or so.
-    // First order: error proportional to alpha. Halving alpha halves it.
     expect(errorAt(0.001, 1) / errorAt(0.002, 1)).toBeCloseTo(0.5, 2);
-
-    // Second order: error proportional to alpha^3. Halving alpha divides by 8.
     expect(errorAt(0.001, 2) / errorAt(0.002, 2)).toBeCloseTo(0.125, 2);
-
-    // ...and second order is far better than first.
     expect(errorAt(0.001, 2)).toBeLessThan(errorAt(0.001, 1) / 1000);
   });
 
-  it.each(ORDINARY_THETAS)(
-    'straddle the exact value at second and third order at theta = %f',
-    (theta) => {
-      const alpha = 0.01;
-      const exact = valueOr(rExact(theta, alpha), NaN);
-      const second = valueOr(rTruncated(theta, alpha, 2), NaN) - exact;
-      const third = valueOr(rTruncated(theta, alpha, 3), NaN) - exact;
-
-      // Opposite sides, same distance: the pairing above, stated numerically.
-      expect(Math.sign(second)).toBe(-Math.sign(third));
-      expect(Math.abs(third / second)).toBeCloseTo(1, 3);
-    },
-  );
-
   it('is exactly -2/alpha at the degenerate point once second order is kept', () => {
     for (const alpha of WITNESS_ALPHAS) {
-      expect(valueOr(rTruncated(DEGENERATE_THETA, alpha, 2), NaN)).toBeCloseTo(
-        -2 / alpha,
-        9,
-      );
+      expect(valueOr(rTruncated(DEGENERATE_THETA, alpha, 2), NaN)).toBeCloseTo(-2 / alpha, 9);
     }
   });
 
@@ -165,8 +122,7 @@ describe('truncated expansions', () => {
 
   /**
    * The float trap. Math.sin(Math.PI) is 1.2246e-16, not zero, so without the
-   * angle tolerance a reader standing on pi would be shown -8.2e15: a huge
-   * finite number in the one place the module needs to say "indeterminate".
+   * angle tolerance a reader standing on pi would be shown -8.2e15.
    */
   it('is indeterminate at every multiple of pi at first order', () => {
     for (const theta of [0, Math.PI, 2 * Math.PI, -Math.PI, 3 * Math.PI]) {
@@ -177,272 +133,144 @@ describe('truncated expansions', () => {
       expect(isDegenerate(theta)).toBe(true);
     }
   });
-
-  it('leaves every point a reader can actually reach alone', () => {
-    // The finest step the theta control offers, either side of every degenerate point.
-    const step = Math.PI / 180;
-    for (const k of [-1, 0, 1, 2]) {
-      for (const offset of [step, -step]) {
-        const theta = k * Math.PI + offset;
-        expect(isDegenerate(theta)).toBe(false);
-        expect(isValue(rTruncated(theta, 0.1, 1))).toBe(true);
-      }
-    }
-  });
-
-  it('snaps to the degenerate point nearest a given theta', () => {
-    expect(nearestDegenerateTheta(0.2)).toBe(0);
-    expect(nearestDegenerateTheta(Math.PI - 0.2)).toBeCloseTo(Math.PI, 12);
-    expect(isDegenerate(nearestDegenerateTheta(Math.PI + 0.3))).toBe(true);
-  });
 });
 
-/* -------------------------------------------------------------------------- *
- * The spec's tables
- * -------------------------------------------------------------------------- */
-
-describe('break table: the hook', () => {
-  // Spec §2 beat 3, at the precision each row is displayed to.
-  const expected: readonly [n: number, decimals: number, shown: string][] = [
-    [1, 6, '0.414214'],
-    [10, 6, '0.498756'],
-    [100, 6, '0.499988'],
-    [1_000, 7, '0.4999999'],
-    [1_000_000, 7, '0.5000000'],
+describe('the hook', () => {
+  // At the precision each row of the table in index.md is displayed to.
+  const expected: readonly [n: number, shown: string][] = [
+    [1, '0.4142136'],
+    [10, '0.4987562'],
+    [100, '0.4999875'],
+    [1_000, '0.4999999'],
+    [1_000_000, '0.5000000'],
   ];
 
-  it.each(expected)('n = %i displays as %s', (n, decimals, shown) => {
-    expect(formatFixed(hook.value(n), decimals)).toBe(shown);
+  it.each(expected)('n = %i displays as %s', (n, shown) => {
+    expect(formatFixed(hook.value(n), 7)).toBe(shown);
   });
 
   it('uses every value of n the table shows', () => {
     expect(HOOK_TABLE_N).toEqual(expected.map(([n]) => n));
   });
 
-  it('approaches one half, and the expansion says how fast', () => {
-    expect(hook.value(1e9)).toBeCloseTo(hook.limit, 12);
-
-    for (const n of [10, 100, 1000]) {
-      // The first term is the limit itself: everything after it is the rate.
-      expect(hook.expansion(n, 1)).toBe(hook.limit);
-
-      // 1/2 - 1/(8n^2) + 1/(16n^4): each term takes the error down by n^2.
-      const errors = [1, 2, 3].map((terms) =>
-        Math.abs(hook.expansion(n, terms) - hook.value(n)),
-      );
-      expect(errors[1] as number).toBeLessThan((errors[0] as number) / (n * n));
-      expect(errors[2] as number).toBeLessThan((errors[1] as number) / (n * n));
-    }
-  });
-
   it('is computed stably: the naive subtraction loses the answer at n = 10^6', () => {
     const n = 1_000_000;
     const naiveFloat = n * (Math.sqrt(n * n + 1) - n);
     expect(formatFixed(hook.value(n), 7)).toBe('0.5000000');
-    // Not a criticism of the reader: the same term, dropped by the arithmetic.
     expect(Math.abs(naiveFloat - hook.limit)).toBeGreaterThan(1e-6);
   });
-});
 
-describe('witness table: theta = 0', () => {
-  // Spec §2 beat 5c, second column. Every cell agrees with the closed form.
-  const expected: readonly [alpha: number, decimals: number, shown: string][] = [
-    [0.1, 2, '-19.98'],
-    [0.01, 3, '-199.998'],
-    [0.001, 4, '-1999.9998'],
-    [0.0001, 5, '-19999.99998'],
-  ];
-
-  it.each(expected)('alpha = %f displays as %s', (alpha, decimals, shown) => {
-    expect(formatEstimate(rExact(DEGENERATE_THETA, alpha), decimals)).toBe(shown);
-  });
-
-  it('is -2/alpha to leading order, which is where the dropped term went', () => {
-    for (const alpha of WITNESS_ALPHAS) {
-      const exact = valueOr(rExact(DEGENERATE_THETA, alpha), NaN);
-      expect(Math.abs(exact - -2 / alpha)).toBeLessThan(alpha);
-    }
-  });
-});
-
-describe('witness table: theta = pi/3', () => {
-  /**
-   * RESOLVED (spec §2 beat 5c, first column).
-   *
-   * The spec's first two cells were -0.51068 and -0.57068 where the closed form
-   * gives -0.51250 and -0.57070, because that column is the linearisation of
-   * the closed form in alpha, -[cot(theta) - (alpha/2)csc^2(theta)], rather
-   * than the closed form itself.
-   *
-   * The page shows the closed form. It is R by definition — checked against the
-   * difference quotient at the top of this file — and the linearisation is an
-   * approximation to it that is already wrong in the third decimal at
-   * alpha = 0.1. The second test below keeps the diagnosis, because it is this
-   * module's own subject turning up in its own specification: a first-order
-   * expansion trusted one order too early, at the very point where the reader
-   * is being told that truncating is safe.
-   */
-  const expected: readonly [alpha: number, decimals: number, shown: string][] = [
-    [0.1, 5, '-0.51250'],
-    [0.01, 5, '-0.57070'],
-    [0.001, 5, '-0.57668'],
-    [0.0001, 5, '-0.57728'],
-  ];
-
-  it.each(expected)('alpha = %f displays as %s', (alpha, decimals, shown) => {
-    expect(formatEstimate(rExact(SAFE_THETA, alpha), decimals)).toBe(shown);
-  });
-
-  it('settles on -cot(pi/3) as alpha shrinks', () => {
-    const settled = valueOr(rExact(SAFE_THETA, 1e-9), NaN);
-    expect(settled).toBeCloseTo(-cot(SAFE_THETA), 8);
-    expect(formatFixed(settled, 4)).toBe('-0.5774');
-  });
-
-  it('the superseded cells are that linearisation, and what it costs', () => {
-    const linearised = (theta: number, alpha: number) =>
-      -(cot(theta) - (alpha / 2) / Math.sin(theta) ** 2);
-    const supersededCells = ['-0.51068', '-0.57068', '-0.57668', '-0.57728'];
-    WITNESS_ALPHAS.forEach((alpha, i) => {
-      expect(formatFixed(linearised(SAFE_THETA, alpha), 5)).toBe(supersededCells[i]);
-    });
-
-    // What the missing order is worth at the largest alpha on the page: enough
-    // to move the third decimal, and nowhere near enough to be visible in the
-    // verdict, which is why a table of this kind can be wrong quietly.
-    const gap = Math.abs(
-      valueOr(rExact(SAFE_THETA, 0.1), NaN) - linearised(SAFE_THETA, 0.1),
-    );
-    expect(gap).toBeGreaterThan(1e-3);
-    expect(gap).toBeLessThan(1e-2);
-  });
-});
-
-/* -------------------------------------------------------------------------- *
- * The relative-separation diagnostic
- * -------------------------------------------------------------------------- */
-
-describe('rho', () => {
-  it('diverges at theta = pi/3 as alpha shrinks', () => {
-    const first = rho(SAFE_THETA, 0.1, 1).binding;
-    const tenth = rho(SAFE_THETA, 0.01, 1).binding;
-    const hundredth = rho(SAFE_THETA, 0.001, 1).binding;
-
-    expect(first).toBeGreaterThan(0);
-    // rho scales like 1/alpha: ten times smaller alpha, ten times larger rho.
-    expect(tenth / first).toBeCloseTo(10, 6);
-    expect(hundredth / tenth).toBeCloseTo(10, 6);
-  });
-
-  it('is 2cot(theta)/alpha in the numerator, as the spec states', () => {
-    for (const alpha of WITNESS_ALPHAS) {
-      const report = rho(SAFE_THETA, alpha, 1);
-      expect(report.numerator.rho).toBeCloseTo((2 * cot(SAFE_THETA)) / alpha, 6);
-    }
-  });
-
-  it('collapses to zero at theta = 0, whatever alpha is', () => {
-    for (const alpha of WITNESS_ALPHAS) {
-      const report = rho(DEGENERATE_THETA, alpha, 1);
-      expect(report.denominator.kept).toBe(0);
-      expect(report.denominator.rho).toBe(0);
-      expect(report.binding).toBe(0);
-    }
-  });
-
-  it('recovers at theta = 0 once the second order is retained', () => {
-    const report = rho(DEGENERATE_THETA, 0.01, 2);
-    expect(report.denominator.kept).toBeGreaterThan(0);
-    expect(report.binding).toBeGreaterThan(0);
-  });
-
-  it('can be zero even when first order preserves the requested limit', () => {
-    const theta = Math.PI / 2;
-    const report = rho(theta, 0.01, 1);
-    expect(report.numerator.kept).toBe(0);
-    expect(report.binding).toBe(0);
-    expect(Math.abs(valueOr(rTruncated(theta, 0.01, 1), NaN))).toBe(0);
-    expect(valueOr(rExact(theta, 1e-6), NaN)).toBeCloseTo(0, 5);
-    const coarse = truncationError(rExact(theta, 0.01), rTruncated(theta, 0.01, 1));
-    const fine = truncationError(rExact(theta, 0.001), rTruncated(theta, 0.001, 1));
-    expect(coarse).not.toBeNull();
-    expect(fine).not.toBeNull();
-    expect(fine as number).toBeLessThan(coarse as number);
-  });
-
-  it('is zero for the hook: everything kept cancels', () => {
-    for (const n of HOOK_TABLE_N) {
-      const report = hookRho(n);
-      expect(report.kept).toBe(0);
-      expect(report.dropped).toBeCloseTo(0.5, 12);
-      expect(report.rho).toBe(0);
-    }
-  });
-});
-
-describe('driving theta through the degenerate point', () => {
-  it('puts both degenerate points and both interesting angles on the grid', () => {
-    for (const degrees of [0, 180, 60, 90]) {
-      expect(Number.isInteger(degrees)).toBe(true);
-      expect(degrees).toBeGreaterThanOrEqual(THETA_MIN_DEGREES);
-      expect(degrees).toBeLessThanOrEqual(THETA_MAX_DEGREES);
-    }
-    expect(degreesToRadians(0)).toBe(0);
-    expect(degreesToRadians(60)).toBeCloseTo(SAFE_THETA, 12);
-    expect(radiansToDegrees(SAFE_THETA)).toBe(60);
-  });
-
-  it('is indeterminate at exactly the two degenerate points, and nowhere else', () => {
-    const sweep = thetaSweep(1);
-    const indeterminate = sweep.filter((s) => !isValue(s.value)).map((s) => s.degrees);
-    expect(indeterminate).toEqual([0, 180]);
-  });
-
-  /**
-   * The transition the module is built around: the value has to run away on the
-   * approach and then stop being a value, rather than jumping from something
-   * ordinary to nothing.
-   */
-  it('diverges on the approach from both sides', () => {
-    const at = (degrees: number) =>
-      Math.abs(valueOr(rTruncated(degreesToRadians(degrees), ALPHA, 1), NaN));
-
-    for (const side of [1, -1]) {
-      expect(at(side * 10)).toBeGreaterThan(at(side * 30));
-      expect(at(side * 3)).toBeGreaterThan(at(side * 10));
-      expect(at(side * 1)).toBeGreaterThan(at(side * 3));
-      expect(at(side * 1)).toBeGreaterThan(50);
-    }
-  });
-
-  it('recovers immediately either side of the point at second order', () => {
-    const sweep = thetaSweep(2);
-    expect(sweep.filter((s) => !isValue(s.value))).toHaveLength(0);
-    // At the point itself, second order gives the -2/alpha the module promises.
-    const atZero = sweep.find((s) => s.degrees === 0);
-    expect(valueOr(atZero?.value ?? indeterminateOf('divergent'), NaN)).toBeCloseTo(-2 / ALPHA, 6);
-  });
-
-  it('retains nothing anywhere at O(1)', () => {
-    expect(thetaSweep(0).every((s) => !isValue(s.value))).toBe(true);
-  });
-});
-
-describe('beat 4: where the answer went', () => {
-  it('throws away five ten-millionths at a million', () => {
+  it('throws away five ten-millionths at a million, and multiplies it back to a half', () => {
     expect(hook.rawDroppedTerm(1_000_000)).toBeCloseTo(5e-7, 15);
-    expect(formatSmall(hook.rawDroppedTerm(1_000_000))).toBe('5.0 × 10\u207b\u2077');
-  });
-
-  it('multiplies it back up to the answer, at every n', () => {
+    expect(formatSmall(hook.rawDroppedTerm(1_000_000))).toBe('5.0 × 10⁻⁷');
     for (const n of HOOK_TABLE_N) {
       expect(hook.droppedTerm(n)).toBeCloseTo(hook.limit, 12);
-      expect(hook.rawDroppedTerm(n) * n).toBeCloseTo(hook.limit, 12);
+      expect(hook.small(n) * n).toBeCloseTo(hook.value(n), 12);
     }
   });
 
-  it('keeps nothing: what survived the cancellation is exactly zero', () => {
-    for (const n of HOOK_TABLE_N) expect(hook.naiveValue(n)).toBe(0);
+  it('keeps nothing with zero terms, the limit with one, and converges from below with two', () => {
+    for (const n of HOOK_TABLE_N) {
+      expect(hook.truncated(n, 0)).toBe(0);
+      expect(hook.truncated(n, 1)).toBe(hook.limit);
+      expect(hook.truncated(n, 2)).toBeLessThan(hook.limit);
+      expect(hook.truncated(n, 2)).toBeCloseTo(hook.limit - 1 / (8 * n * n), 12);
+    }
+  });
+
+  it('has a discarded effect that does not shrink with zero terms, and does with one', () => {
+    expect(hookError(1_000_000, 0)).toBeCloseTo(0.5, 6);
+    expect(hookError(1_000, 0)).toBeCloseTo(0.5, 5);
+    expect(hookError(1_000, 1)).toBeLessThan(hookError(10, 1));
+    expect(hookError(1_000, 1)).toBeLessThan(1e-6);
+  });
+
+  it('reaches 1, 10, 100 and a million exactly from the slider', () => {
+    expect(nFromSlider(N_SLIDER.min)).toBe(1);
+    expect(nFromSlider(10)).toBe(10);
+    expect(nFromSlider(20)).toBe(100);
+    expect(nFromSlider(N_SLIDER.max)).toBe(1_000_000);
+    const sweep = hookSweep(0);
+    expect(sweep).toHaveLength(N_SLIDER.max - N_SLIDER.min + 1);
+    expect(sweep.every((s) => s.truncated === 0)).toBe(true);
+    expect(sweep.at(-1)?.value).toBeCloseTo(0.5, 9);
+  });
+});
+
+describe('the window around theta = 0', () => {
+  it('puts theta = 0 and the true pole exactly on the grid', () => {
+    for (const alpha of ALPHAS) {
+      expect(thetaFromIndex(0, alpha)).toBe(0);
+      expect(thetaFromIndex(-5, alpha)).toBeCloseTo(-alpha / 2, 15);
+      expect(rExact(thetaFromIndex(-5, alpha), alpha)).toEqual({
+        kind: 'indeterminate',
+        reason: 'divergent',
+      });
+    }
+  });
+
+  it('has the dropped term larger than the kept one exactly inside |tan theta| < alpha/2', () => {
+    for (const alpha of ALPHAS) {
+      const half = dominanceHalfWidth(alpha);
+      expect(half).toBeCloseTo(Math.atan(alpha / 2), 15);
+      expect(rhoDenominator(half * 0.9, alpha)).toBeLessThan(1);
+      expect(rhoDenominator(half * 1.1, alpha)).toBeGreaterThan(1);
+      expect(rhoDenominator(0, alpha)).toBe(0);
+      const at = termSizes(0, alpha);
+      expect(at.kept).toBe(0);
+      expect(at.dropped).toBeCloseTo((alpha * alpha) / 2, 15);
+    }
+  });
+
+  it('never closes: the window shrinks with alpha but is never empty', () => {
+    const widths = ALPHAS.map((alpha) => dominanceHalfWidth(alpha));
+    for (let i = 1; i < widths.length; i += 1) {
+      expect(widths[i] as number).toBeLessThan(widths[i - 1] as number);
+      expect(widths[i] as number).toBeGreaterThan(0);
+    }
+  });
+
+  it('is indeterminate at exactly theta = 0 at first order, and nowhere else in the window', () => {
+    for (const alpha of ALPHAS) {
+      const sweep = windowSweep(alpha, 1);
+      expect(sweep).toHaveLength(THETA_INDEX.max - THETA_INDEX.min + 1);
+      const dead = sweep.filter((s) => !isValue(s.truncated)).map((s) => s.theta);
+      expect(dead).toEqual([0]);
+    }
+  });
+
+  it('recovers everywhere at second order, and lands on -2/alpha at zero', () => {
+    for (const alpha of ALPHAS) {
+      const sweep = windowSweep(alpha, 2);
+      expect(sweep.filter((s) => !isValue(s.truncated))).toHaveLength(0);
+      const atZero = sweep.find((s) => s.theta === 0);
+      expect(valueOr(atZero?.truncated ?? rTruncated(0, alpha, 0), NaN)).toBeCloseTo(-2 / alpha, 6);
+    }
+  });
+
+  it('has no discarded effect to report when one side is not a value', () => {
+    expect(truncationError(rExact(0, 0.05), rTruncated(0, 0.05, 1))).toBeNull();
+    const fine = truncationError(rExact(0, 0.05), rTruncated(0, 0.05, 2));
+    expect(fine).not.toBeNull();
+    expect(fine as number).toBeLessThan(0.05);
+  });
+
+  it('offers alphas from 0.3 down to 0.001, clamped', () => {
+    expect(alphaAt(0)).toBe(0.3);
+    expect(alphaAt(ALPHAS.length - 1)).toBe(0.001);
+    expect(alphaAt(-3)).toBe(0.3);
+    expect(alphaAt(99)).toBe(0.001);
+  });
+});
+
+describe('witness table: theta = pi/3 and theta = 0', () => {
+  it('settles at -cot(pi/3) and runs away as -2/alpha', () => {
+    for (const alpha of WITNESS_ALPHAS) {
+      expect(Math.abs(valueOr(rExact(SAFE_THETA, alpha), NaN) + cot(SAFE_THETA))).toBeLessThan(alpha);
+      expect(Math.abs(valueOr(rExact(DEGENERATE_THETA, alpha), NaN) - -2 / alpha)).toBeLessThan(alpha);
+    }
+    expect(formatEstimate(rExact(SAFE_THETA, 0.0001), 4)).toBe('-0.5773');
+    expect(formatEstimate(rExact(DEGENERATE_THETA, 0.001), 4)).toBe('-1999.9998');
   });
 });
 
@@ -450,198 +278,42 @@ describe('readouts', () => {
   it('says how big a runaway value is rather than printing meaningless digits', () => {
     expect(formatLarge(-0.5773)).toBe('-0.577');
     expect(formatLarge(-2000)).toBe('-2000');
-    expect(formatLarge(-8.2e15)).toBe('-8.2 × 10\u00b9\u2075');
+    expect(formatLarge(-8.2e15)).toBe('-8.2 × 10¹⁵');
   });
 
   it('never renders a non-value as a number', () => {
-    expect(formatReadout(rTruncated(DEGENERATE_THETA, ALPHA, 1))).toBe(
-      'approximation unavailable',
-    );
-    expect(formatReadout(rTruncated(SAFE_THETA, ALPHA, 1))).toBe('-0.577');
+    expect(formatReadout(rTruncated(DEGENERATE_THETA, 0.05, 1))).toBe('kept denominator is 0');
+    expect(formatReadout(rExact(-0.025, 0.05))).toBe('no value: a pole');
+    expect(formatReadout(rTruncated(SAFE_THETA, 0.001, 1))).toBe('-0.577');
+    for (const order of ORDERS) {
+      const result = rTruncated(DEGENERATE_THETA, 0.1, order);
+      if (isValue(result)) expect(Number.isFinite(result.value)).toBe(true);
+      else expect(formatEstimate(result, 4)).not.toMatch(/^-?\d+(\.\d+)?$/);
+    }
   });
 
   it('never signs a zero', () => {
-    // tan(pi) floats as -1.2e-16: the reader should see zero, not a shade under it.
     expect(formatFixed(-1.2246e-16, 3)).toBe('0.000');
     expect(formatFixed(-0, 2)).toBe('0.00');
     expect(formatFixed(-0.0004, 3)).toBe('0.000');
-    // ...but a value that genuinely rounds to something keeps its sign.
     expect(formatFixed(-0.6, 1)).toBe('-0.6');
   });
 
-  it('reports an unbounded rho as unbounded', () => {
+  it('reports rho at its limits', () => {
     expect(formatRho(Number.POSITIVE_INFINITY)).toBe('unbounded');
     expect(formatRho(0)).toBe('0');
+    expect(formatRho(2.5)).toBe('2.50');
+  });
+
+  it('writes the window theta as a multiple of alpha and in radians', () => {
+    expect(formatWindowTheta(15, 0.05)).toBe('1.5α = 0.0750');
+    expect(formatWindowTheta(-5, 0.1)).toBe('−0.5α = -0.0500');
+    expect(formatWindowTheta(0, 0.3)).toBe('0.0α = 0.0000');
   });
 
   it('shows the same value either side of the boundary at fixed order', () => {
-    // The claim in section 5: at pi/3 the value stops moving once alpha is kept.
-    const first = formatReadout(rTruncated(SAFE_THETA, ALPHA, 1));
-    const second = formatReadout(rTruncated(SAFE_THETA, ALPHA, 2));
-    const third = formatReadout(rTruncated(SAFE_THETA, ALPHA, 3));
+    const first = formatReadout(rTruncated(SAFE_THETA, 0.001, 1));
+    const second = formatReadout(rTruncated(SAFE_THETA, 0.001, 2));
     expect(second).toBe(first);
-    expect(third).toBe(first);
-  });
-});
-
-describe('the bank', () => {
-  it('groups by mechanism, not by topic', () => {
-    const groups = bankByAmplifier();
-    expect(groups.map((group) => group.amplifier)).toEqual([
-      'cancellation',
-      'multiplication',
-    ]);
-    for (const group of groups) {
-      expect(group.entries.length).toBeGreaterThan(0);
-      for (const entry of group.entries) {
-        expect(entry.amplifiers).toContain(group.amplifier);
-      }
-    }
-  });
-
-  it('lists a question driven by both mechanisms under both', () => {
-    const both = BANK.filter((entry) => entry.amplifiers.length === 2);
-    expect(both.length).toBeGreaterThan(0);
-    const groups = bankByAmplifier();
-    for (const entry of both) {
-      const appearances = groups.filter((group) =>
-        group.entries.some((each) => each.id === entry.id),
-      );
-      expect(appearances).toHaveLength(2);
-    }
-  });
-
-  it('cites every question and links every paper', () => {
-    for (const entry of BANK) {
-      expect(entry.question).toMatch(/^\d{4} STEP [23], Q/);
-      expect(entry.paper).toMatch(/^https:\/\/step\.maths\.org\/.+\.pdf$/);
-    }
-  });
-
-  it('says what each mechanism contributes, so no cell repeats another', () => {
-    for (const entry of BANK) {
-      // A question filed under both mechanisms is there for two different
-      // reasons; the same paragraph in both drawers would say neither.
-      for (const amplifier of entry.amplifiers) {
-        expect(entry.why[amplifier]?.length ?? 0).toBeGreaterThan(20);
-      }
-      const reasons = entry.amplifiers.map((amplifier) => entry.why[amplifier]);
-      expect(new Set(reasons).size).toBe(reasons.length);
-      // ...and carries no reason for a mechanism it is not filed under.
-      expect(Object.keys(entry.why).sort()).toEqual([...entry.amplifiers].sort());
-    }
-  });
-
-  it('warns that the links carry solutions', () => {
-    // These are worked papers, not bare question papers. A reader about to work
-    // a question should not be dropped into the model answer unannounced.
-    expect(BANK_LINK_NOTE).toMatch(/solution/i);
-    expect(BANK_LINK_NOTE).toMatch(/worked paper/i);
-  });
-});
-
-describe('measurement', () => {
-  it('locates where first-order expansion fails, for R and for its reciprocal', () => {
-    // The taught case...
-    expect(degeneratePointsOf('r')).toEqual([0, 180]);
-    // ...and the transfer item, which is deliberately not it.
-    expect(degeneratePointsOf('reciprocal')).toEqual([90, 270]);
-  });
-
-  /**
-   * The response the widget submits and the key it is marked against are built
-   * in two different files. They once sorted differently — "270,90" against a
-   * key of "90,270" — and the transfer item could not be answered correctly by
-   * anyone. This test goes through the same canonical form the widget uses.
-   */
-  it('marks the transfer item on the answer a reader can actually give', () => {
-    const asSubmitted = (degrees: readonly number[]) =>
-      canonicalSelection(degrees.map(String));
-
-    // Both click orders produce the same submission, and both are correct.
-    expect(marksReciprocalPoints(asSubmitted([90, 270]))).toBe(true);
-    expect(marksReciprocalPoints(asSubmitted([270, 90]))).toBe(true);
-    expect(reciprocalPointsKey()).toBe(asSubmitted(degeneratePointsOf('reciprocal')));
-  });
-
-  it('does not accept the taught answer, which is the whole point of the item', () => {
-    const asSubmitted = (degrees: readonly number[]) =>
-      canonicalSelection(degrees.map(String));
-
-    expect(marksReciprocalPoints(asSubmitted(degeneratePointsOf('r')))).toBe(false);
-    expect(marksReciprocalPoints(asSubmitted([0, 180]))).toBe(false);
-    // Nor half an answer, nor everything at once.
-    expect(marksReciprocalPoints(asSubmitted([90]))).toBe(false);
-    expect(marksReciprocalPoints(asSubmitted([0, 90, 180, 270]))).toBe(false);
-  });
-
-  it('gets the M1 limits right, computed rather than written down', () => {
-    const [first, second, third] = ORDER_ITEMS;
-    expect(first?.limit()).toBeCloseTo(1.5, 6);
-    expect(second?.limit()).toBeCloseTo(0.5, 6);
-    expect(third?.limit()).toBeCloseTo(1 / 24, 6);
-  });
-
-  it('counts powers through the first surviving term, including zero coefficients', () => {
-    expect(ORDER_ITEMS.map((item) => item.ordersPastLeading)).toEqual([1, 2, 4]);
-  });
-
-  it('writes those limits as fractions', () => {
-    expect(ORDER_ITEMS.map((item) => formatLimit(item.limit()))).toEqual([
-      '3/2',
-      '1/2',
-      '1/24',
-    ]);
-  });
-
-  it('finds the simplest fraction, or admits there is not one', () => {
-    expect(toFraction(0.5)).toEqual({ numerator: 1, denominator: 2 });
-    expect(toFraction(-1.5)).toEqual({ numerator: -3, denominator: 2 });
-    expect(toFraction(2)).toEqual({ numerator: 2, denominator: 1 });
-    expect(toFraction(Math.PI, 1e-12, 100)).toBeNull();
-  });
-
-  it('knows which way the error goes here', () => {
-    // Keeping nothing gives zero, and zero is below one half.
-    expect(hookErrorDirection()).toBe('too small');
-  });
-
-  it('separates shortcuts that preserve a limit from an amplified remainder', () => {
-    for (const item of TRANSFER_CASES) {
-      const earlierError = Math.abs(item.exact(1_000) - item.expectedLimit);
-      const laterError = Math.abs(item.exact(1_000_000) - item.expectedLimit);
-      expect(laterError).toBeLessThan(earlierError);
-      expect(item.exact(1_000_000)).toBeCloseTo(item.expectedLimit, 5);
-    }
-
-    const shortcuts = Object.fromEntries(
-      TRANSFER_CASES.map((item) => [item.id, item.shortcut(1_000_000)]),
-    );
-    expect(shortcuts).toEqual({ a: 3, b: 0, c: 0.5, d: 0 });
-
-    expect(TRANSFER_CASES.map((item) => [item.id, transferPreservesLimit(item)])).toEqual([
-      ['a', true],
-      ['b', false],
-      ['c', true],
-      ['d', true],
-    ]);
-    expect(transferAnswerKey()).toBe('a,c,d');
-  });
-});
-
-describe('estimates', () => {
-  it('never reports a non-value as a number', () => {
-    for (const order of ORDERS) {
-      const result = rTruncated(DEGENERATE_THETA, 0.1, order);
-      if (!isValue(result)) {
-        expect(formatEstimate(result, 4)).toBe('approximation unavailable');
-      } else {
-        expect(Number.isFinite(result.value)).toBe(true);
-      }
-    }
-  });
-
-  it('is indeterminate rather than infinite where the exact form has a pole', () => {
-    expect(rExact(0, 0)).toEqual({ kind: 'indeterminate', reason: 'divergent' });
   });
 });

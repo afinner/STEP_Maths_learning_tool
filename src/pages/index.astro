@@ -8,46 +8,68 @@ import { includeDrafts, publishedModules } from '../lib/collections';
 const modules = publishedModules(await getCollection('modules'), {
   includeDrafts: includeDrafts(),
 });
+
+const STEPS = [
+  { index: '01', name: 'Hook', text: 'A short example where the belief gives a wrong answer.' },
+  { index: '02', name: 'Explore', text: 'Sliders and plots that measure exactly where it fails.' },
+  { index: '03', name: 'Why', text: 'The mathematics, argued properly.' },
+  { index: '04', name: 'STEP', text: 'The question it was learned from, with a solution.' },
+  { index: '05', name: 'Bank', text: 'More questions with the same mechanism.' },
+];
 ---
 
 <BaseLayout
   title="Failure modes — the maths I only thought I understood"
-  description="Each module takes one maths concept where I found my understanding was superficial: the belief itself, a case where it gives the wrong answer, and the single quantity that decides when it fails."
+  description="Interactive modules built from maths concepts that turned out to be only half understood while working STEP questions: the belief, where it fails, and the quantity that decides it."
 >
-  <section class="intro prose">
+  <section class="hero">
+    <p class="eyebrow">By Andrew Finnerty</p>
     <h1>The maths I only thought I understood</h1>
-    <p class="byline">By Andrew Finnerty</p>
-    <p>
-      Working through STEP questions, I kept meeting the same thing: a concept I
-      could use fluently, and a question built exactly where my understanding of it
-      ran out. What was missing each time was not a step of the working. It was a
-      belief about how the mathematics behaves — close enough to right to have
-      survived every question I had met before, and wrong in the one place the
-      question was standing.
-    </p>
-    <p>
-      Each entry is one of those beliefs. It names the belief, gives a concrete case
-      where it produces a wrong answer, and identifies the single quantity that
-      decides when it fails. They are meant to be read in any order, or one at a
-      time when the belief in question is the one getting in your way.
+    <p class="hero-text">
+      Working through STEP questions I kept meeting the same thing: a concept I could use
+      fluently, and a question built exactly where my understanding of it ran out. Each module
+      here takes one of those beliefs, finds the single quantity that decides when it fails,
+      and lets you measure it.
     </p>
   </section>
 
-  <ul class="module-list">
-    {
-      modules.map((entry) => (
-        <li>
-          <a href={modulePath(entry.id)}>
-            <span class="claim">“{entry.data.claim}”</span>
-            <span class="meta">
-              <time datetime={isoDate(entry.data.added)}>{formatDate(entry.data.added)}</time>
-            </span>
-            <span class="context">
-              {entry.data.title} · {entry.data.context}
-            </span>
-          </a>
-        </li>
-      ))
-    }
-  </ul>
+  <section class="how" aria-labelledby="how-heading">
+    <h2 id="how-heading" class="how-heading">Every module, in the same five parts</h2>
+    <ol class="how-steps">
+      {
+        STEPS.map((step) => (
+          <li>
+            <span class="how-index" aria-hidden="true">{step.index}</span>
+            <span class="how-name">{step.name}</span>
+            <span class="how-text">{step.text}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section aria-labelledby="modules-heading">
+    <h2 id="modules-heading" class="visually-hidden">Modules</h2>
+    <ul class="module-grid">
+      {
+        modules.map((entry, i) => (
+          <li>
+            <a class="module-card" href={modulePath(entry.id)}>
+              <span class="module-card-index" aria-hidden="true">
+                {String(modules.length - i).padStart(2, '0')}
+              </span>
+              <span class="module-card-title">{entry.data.title}</span>
+              <span class="module-card-claim">“{entry.data.claim}”</span>
+              <span class="module-card-summary">{entry.data.summary}</span>
+              <span class="module-card-meta">
+                <span>{entry.data.context}</span>
+                {entry.data.question ? <span>{entry.data.question.citation}</span> : null}
+                <time datetime={isoDate(entry.data.added)}>{formatDate(entry.data.added)}</time>
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
 </BaseLayout>

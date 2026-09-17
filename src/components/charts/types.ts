@@ -38,6 +38,8 @@ export interface Band {
   to: number;
   label?: string;
   tone?: 'primary' | 'break';
+  /** Where the label sits. Defaults to the head for primary bands and the foot for break bands. */
+  labelAt?: 'top' | 'bottom';
 }
 
 export type ScaleType = 'linear' | 'log';
@@ -53,7 +55,7 @@ export interface ChartFrame {
   caption?: string;
 }
 
-export const DEFAULT_MARGIN = { top: 12, right: 16, bottom: 40, left: 52 } as const;
+export const DEFAULT_MARGIN = { top: 14, right: 16, bottom: 40, left: 58 } as const;
 
 /** Ticks are formatted for reading, not for precision. */
 export function formatTick(value: number): string {

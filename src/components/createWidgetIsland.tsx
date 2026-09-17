@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import type { WidgetHostProps } from './ModuleShell';
+import type { WidgetHostProps } from './explore/ExploreShell';
 
 export type WidgetModule = { default: ComponentType<WidgetHostProps> };
 
@@ -19,25 +19,15 @@ export interface WidgetIslandProps extends WidgetHostProps {
  *
  * The consequence to know about: the glob is eager, so every module's widget
  * ends up in one client chunk shared by all module pages. That is the price of
- * a single dynamic route, and it is the right trade at this size — widgets are
- * a few kB of pure functions each, and the alternative is a hand-written page
- * file per module. If the catalogue ever grows to where that chunk is felt,
- * the fix is to generate one route file per module and import its widget
- * directly; nothing in the module format has to change.
+ * a single dynamic route, and it is the right trade at this size. If the
+ * catalogue ever grows to where that chunk is felt, the fix is to generate one
+ * route file per module and import its widget directly; nothing in the module
+ * format has to change.
  */
-export function createWidgetIsland(
-  widgets: Record<string, WidgetModule>,
-  /**
-   * Optional islands render nothing when the module has no such file. Used for
-   * closing.tsx, which most modules will not have: a module is four files, and
-   * anything past that is a module choosing to say more.
-   */
-  options: { optional?: boolean } = {},
-) {
+export function createWidgetIsland(widgets: Record<string, WidgetModule>) {
   return function WidgetIsland({ widgetPath, ...host }: WidgetIslandProps) {
     const module = widgets[widgetPath];
     if (!module) {
-      if (options.optional) return null;
       throw new Error(
         `No widget found at ${widgetPath}. Every module needs a widget.tsx next to its index.md — see CONTRIBUTING.md.`,
       );
