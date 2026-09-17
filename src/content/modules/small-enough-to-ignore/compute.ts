@@ -1,20 +1,19 @@
-import { AMPLIFIERS, type Amplifier } from '../../../lib/amplifiers';
-import { canonicalSelection } from '../../../lib/selection';
 import { formatFixed } from '../../../lib/numbers';
 
 /**
  * Module 01 — Small enough to ignore.
  *
  * Every number the reader sees on this page is produced here. Nothing in the
- * prose, the tables or the widget is a literal: if a value appears on screen, it
+ * prose, the tables or the panels is a literal: if a value appears on screen it
  * came out of a function below, so the page cannot drift away from the maths.
  *
- * Two witnesses live here:
+ * Two situations live here:
  *   - the hook, n(sqrt(n^2 + 1) - n), where the answer is the term you dropped;
  *   - the ratio R(theta, alpha), where the same truncation is right at one point
- *     and useless at another.
+ *     and returns nothing at all at another.
  *
- * The closed form of R is the oracle for everything else in this file.
+ * The closed form of R, -cot(theta + alpha/2), is the oracle for everything
+ * about R in this file.
  */
 
 /* ------------------------------------------------------------------------- *
@@ -57,17 +56,7 @@ export function valueOr(e: Estimate, fallback: number): number {
 }
 
 /* ------------------------------------------------------------------------- *
- * Amplifiers: why a dropped term comes back
- * ------------------------------------------------------------------------- */
-
-/**
- * The vocabulary is shared across modules rather than owned by this one, since
- * the bank sorts by mechanism and later modules sort into the same drawers.
- */
-export type { Amplifier };
-
-/* ------------------------------------------------------------------------- *
- * The hook
+ * The hook: n(sqrt(n^2 + 1) - n)
  * ------------------------------------------------------------------------- */
 
 /** Generalised binomial coefficient C(alpha, k), for the expansion of a root. */
@@ -77,142 +66,101 @@ export function binomialCoefficient(alpha: number, k: number): number {
   return c;
 }
 
-export interface HookExpression {
-  readonly id: string;
-  /** The expression itself, as KaTeX, for anything rendered at build time. */
-  readonly latex: string;
-  /** The same expression in plain text, for the island, which does not typeset. */
-  readonly text: string;
-  /** How the naive move is described: what gets rounded to what. */
-  readonly shortcutText: string;
-  /** What is left once the retained terms cancel, in the reader's words. */
-  readonly cancellationText: string;
-  /** The variable the reader watches grow. */
-  readonly variableLatex: string;
-  readonly limit: number;
-  readonly limitLatex: string;
-  /** Which amplifiers this hook fires. See §7 question 1: the fewer, the cleaner. */
-  readonly amplifiers: readonly Amplifier[];
-  /** The true value, computed stably. */
-  value(n: number): number;
-  /** What the naive move leaves behind, after the terms you kept cancel. */
-  naiveValue(n: number): number;
-  /** The leading term the naive move discards, before anything amplifies it. */
-  rawDroppedTerm(n: number): number;
-  /** The same term, after whatever multiplies it. This is where the answer went. */
-  droppedTerm(n: number): number;
-  /** Partial sum of the expansion, keeping `terms` terms. */
-  expansion(n: number, terms: number): number;
-  /** Each term of the expansion as KaTeX, in order. */
-  readonly expansionLatex: readonly string[];
-}
+/** How many terms of the correction sqrt(n^2+1) - n = 1/2n - 1/8n^3 + ... are kept. */
+export type Terms = 0 | 1 | 2;
+export const TERMS: readonly Terms[] = [0, 1, 2];
 
-/**
- * n(sqrt(n^2+1) - n).
- *
- * Computed as n / (sqrt(n^2+1) + n). Algebraically identical, and the reason for
- * the rearrangement is the module's own subject in miniature: evaluating the
- * subtraction directly at n = 10^6 cancels away most of the significant digits
- * of a double and returns 0.500003807, which is wrong in the fourth decimal
- * place. The float arithmetic drops the same term the reader does.
- */
-const rootHook: HookExpression = {
-  id: 'root-of-n-squared-plus-one',
-  latex: 'n\\left(\\sqrt{n^{2}+1}-n\\right)',
+/** What the reader replaced the root by, at each setting. Plain text: the island does not typeset. */
+export const TERM_LABELS: Readonly<Record<Terms, string>> = {
+  0: 'n',
+  1: 'n + 1/2n',
+  2: 'n + 1/2n − 1/8n³',
+};
+
+export const hook = {
   text: 'n(√(n² + 1) − n)',
-  shortcutText: 'Rounding √(n² + 1) down to n',
-  cancellationText: 'n − n leaves nothing to carry the result',
-  variableLatex: 'n',
   limit: 0.5,
-  limitLatex: '\\tfrac{1}{2}',
-  amplifiers: ['cancellation', 'multiplication'],
-  value: (n) => n / (Math.sqrt(n * n + 1) + n),
-  // sqrt(n^2+1) rounded down to n: what you keep is n - n.
-  naiveValue: (n) => n * (n - n),
-  // Rounding the root down to n throws away 1/(2n) ...
-  rawDroppedTerm: (n) => binomialCoefficient(0.5, 1) / n,
-  // ... and then the n outside multiplies it straight back up to the answer.
-  droppedTerm: (n) => n * (binomialCoefficient(0.5, 1) / n),
-  expansion: (n, terms) => {
+
+  /**
+   * The true value, computed as n / (sqrt(n^2+1) + n). Algebraically identical,
+   * and the reason for the rearrangement is the module's own subject in
+   * miniature: evaluating the subtraction directly at n = 10^6 cancels away
+   * most of the significant digits of a double and returns 0.500003807. The
+   * float arithmetic drops the same term the reader does.
+   */
+  value: (n: number): number => n / (Math.sqrt(n * n + 1) + n),
+
+  /** The small quantity itself, sqrt(n^2+1) - n, computed the same stable way. */
+  small: (n: number): number => 1 / (Math.sqrt(n * n + 1) + n),
+
+  /** The leading term of the small quantity: what rounding the root to n throws away. */
+  rawDroppedTerm: (n: number): number => binomialCoefficient(0.5, 1) / n,
+
+  /** The same term after the factor of n outside multiplies it. This is where the answer went. */
+  droppedTerm: (n: number): number => n * (binomialCoefficient(0.5, 1) / n),
+
+  /** sqrt(n^2+1) - n with `terms` terms of its expansion kept. Zero terms is the shortcut. */
+  correction: (n: number, terms: Terms): number => {
     let total = 0;
     for (let k = 1; k <= terms; k += 1) {
-      total += binomialCoefficient(0.5, k) * Math.pow(n, 2 - 2 * k);
+      total += binomialCoefficient(0.5, k) * Math.pow(n, 1 - 2 * k);
     }
     return total;
   },
-  expansionLatex: ['\\tfrac{1}{2}', '-\\tfrac{1}{8n^{2}}', '+\\tfrac{1}{16n^{4}}'],
-};
+
+  /** The whole expression with the root truncated: n times the kept correction. */
+  truncated: (n: number, terms: Terms): number => n * hook.correction(n, terms),
+} as const;
+
+/** The discarded effect for the hook: how far the truncated answer sits from the true one. */
+export function hookError(n: number, terms: Terms): number {
+  return Math.abs(hook.value(n) - hook.truncated(n, terms));
+}
 
 /**
- * The alternative from §7 question 1: one amplifier, cleaner to diagnose, more
- * likely to be recognised. Kept working so the choice stays a one-line change.
+ * The n control carries an integer k and shows n = 10^(k/10), rounded, so that
+ * 1, 10, 100, ... and 10^6 are exactly reachable and the slider is log-spaced.
  */
-const compoundHook: HookExpression = {
-  id: 'compound-interest',
-  latex: '\\left(1+\\tfrac{1}{n}\\right)^{n}',
-  text: '(1 + 1/n)ⁿ',
-  shortcutText: 'Rounding 1 + 1/n down to 1',
-  cancellationText: '1 raised to any power leaves nothing to carry the result',
-  variableLatex: 'n',
-  limit: Math.E,
-  limitLatex: 'e',
-  amplifiers: ['multiplication'],
-  value: (n) => Math.pow(1 + 1 / n, n),
-  // 1/n rounded down to 0: what you keep is 1^n.
-  naiveValue: (n) => Math.pow(1 + 0 * n, n),
-  rawDroppedTerm: (n) => 1 / n,
-  droppedTerm: (n) => Math.pow(1 + 1 / n, n) - Math.pow(1 + 0 * n, n),
-  expansion: (n, terms) => {
-    // e(1 - 1/(2n) + 11/(24n^2) - ...)
-    const coefficients = [1, -1 / 2, 11 / 24];
-    let total = 0;
-    for (let k = 0; k < Math.min(terms, coefficients.length); k += 1) {
-      total += (coefficients[k] as number) * Math.pow(n, -k);
-    }
-    return Math.E * total;
-  },
-  expansionLatex: ['e', '-\\tfrac{e}{2n}', '+\\tfrac{11e}{24n^{2}}'],
-};
+export const N_SLIDER = { min: 0, max: 60 } as const;
 
-export const HOOKS: Readonly<Record<string, HookExpression>> = {
-  [rootHook.id]: rootHook,
-  [compoundHook.id]: compoundHook,
-};
+export function nFromSlider(k: number): number {
+  return Math.round(Math.pow(10, k / 10));
+}
 
-/**
- * §7 question 1 is open, and this is the parameter that settles it.
- *
- * Every component reads the active hook through `hook`, including the strings it
- * prints, so changing this line swaps the expression, its table, its captions
- * and the measurement item together. One thing does not follow automatically:
- * index.md is markdown and cannot interpolate, so `predictionPrompt` and the
- * display maths in the body have to be edited by hand to match.
- */
-export const ACTIVE_HOOK_ID = rootHook.id;
-
-export const hook: HookExpression = HOOKS[ACTIVE_HOOK_ID] as HookExpression;
-
-/** The values of n shown in the break table. Inputs, not answers. */
+/** The values of n in the hook's table. Inputs, not answers. */
 export const HOOK_TABLE_N: readonly number[] = [1, 10, 100, 1_000, 1_000_000];
 
 export interface HookSample {
   n: number;
+  small: number;
   value: number;
+  truncated: number;
 }
 
-export function hookTable(ns: readonly number[] = HOOK_TABLE_N): HookSample[] {
-  return ns.map((n) => ({ n, value: hook.value(n) }));
+/** The three curves of the first panel, sampled at every slider position. */
+export function hookSweep(terms: Terms): HookSample[] {
+  const samples: HookSample[] = [];
+  for (let k = N_SLIDER.min; k <= N_SLIDER.max; k += 1) {
+    const n = nFromSlider(k);
+    samples.push({
+      n,
+      small: hook.small(n),
+      value: hook.value(n),
+      truncated: hook.truncated(n, terms),
+    });
+  }
+  return samples;
 }
 
 /* ------------------------------------------------------------------------- *
- * The witness: R(theta, alpha)
+ * The ratio R(theta, alpha)
  * ------------------------------------------------------------------------- */
 
-export const MAX_ORDER = 3;
 export type Order = 0 | 1 | 2 | 3;
 export const ORDERS: readonly Order[] = [0, 1, 2, 3];
+/** The orders the panel offers. O(1) retains nothing at all and is left to the tests. */
+export const PANEL_ORDERS: readonly Order[] = [1, 2, 3];
 
-/** How the control labels each stop. */
 export const ORDER_LABELS: Readonly<Record<Order, string>> = {
   0: 'O(1)',
   1: 'O(α)',
@@ -231,29 +179,19 @@ function factorial(k: number): number {
 /**
  * How close to a zero of sine or cosine counts as being at it.
  *
- * This is not a fudge factor, and the module would be dishonest with a sloppy
- * one. The degenerate points are theta = 0, pi, 2pi, where the denominator's
- * first-order coefficient -sin(theta) vanishes. Only theta = 0 is exactly
- * representable: Math.sin(Math.PI) is 1.2246e-16, so a reader standing on pi
- * would be shown -8.2e15 — a huge finite number in the one place the module
- * needs to say "indeterminate", which is precisely the error the module is
- * about.
- *
- * The tolerance is safe because it is nowhere near anything reachable. The
- * theta control moves in steps of pi/180 at finest, so every point a reader can
- * visit is either exactly a degenerate point or ~0.017 away from one — fifteen
- * orders of magnitude outside this window. No point that is genuinely non-zero
- * can be swallowed by it.
+ * Only theta = 0 is exactly representable among the degenerate points:
+ * Math.sin(Math.PI) is 1.2246e-16, so a reader standing on pi would be shown
+ * -8.2e15 — a huge finite number in the one place the module needs to say
+ * "indeterminate", which is precisely the error the module is about. The
+ * tolerance is fifteen orders of magnitude below anything a control can reach.
  */
 export const ANGLE_TOLERANCE = 1e-9;
 
-/** sin(theta), reading exact zeros as zero. */
 export function sinAt(theta: number): number {
   const s = Math.sin(theta);
   return Math.abs(s) < ANGLE_TOLERANCE ? 0 : s;
 }
 
-/** cos(theta), reading exact zeros as zero. */
 export function cosAt(theta: number): number {
   const c = Math.cos(theta);
   return Math.abs(c) < ANGLE_TOLERANCE ? 0 : c;
@@ -264,11 +202,6 @@ export function isDegenerate(theta: number): boolean {
   return sinAt(theta) === 0;
 }
 
-/** The degenerate point nearest a given theta — what the theta control snaps to. */
-export function nearestDegenerateTheta(theta: number): number {
-  return Math.round(theta / Math.PI) * Math.PI;
-}
-
 /**
  * Coefficient of alpha^k in the expansion about alpha = 0 of
  *
@@ -277,8 +210,7 @@ export function nearestDegenerateTheta(theta: number): number {
  *   denominator  cos(theta + alpha) - cos(theta) = -sin(theta)(alpha - alpha^3/6 + ...)
  *                                                 + cos(theta)(-alpha^2/2 + ...)
  *
- * Both have no constant term: at alpha = 0 the two points coincide. That is why
- * the O(1) setting of the slider retains nothing at all.
+ * Both have no constant term: at alpha = 0 the two points coincide.
  */
 export function seriesCoefficient(part: Part, theta: number, k: number): number {
   if (k <= 0) return 0;
@@ -292,12 +224,7 @@ export function seriesCoefficient(part: Part, theta: number, k: number): number 
 }
 
 /** The retained part: every term up to and including alpha^order. */
-export function truncatedPart(
-  part: Part,
-  theta: number,
-  alpha: number,
-  order: Order,
-): number {
+export function truncatedPart(part: Part, theta: number, alpha: number, order: Order): number {
   let total = 0;
   for (let k = 0; k <= order; k += 1) {
     total += seriesCoefficient(part, theta, k) * Math.pow(alpha, k);
@@ -336,10 +263,7 @@ export function rExact(theta: number, alpha: number): Estimate {
   return estimate(-cosAt(argument) / sin);
 }
 
-/**
- * R straight from the definition, without the identity. Used by the tests to
- * establish that the closed form is the same object, not a claim about it.
- */
+/** R straight from the definition, for the tests to establish the closed form is the same object. */
 export function rFromDefinition(theta: number, alpha: number): Estimate {
   const numerator = Math.sin(theta + alpha) - Math.sin(theta);
   const denominator = Math.cos(theta + alpha) - Math.cos(theta);
@@ -349,552 +273,122 @@ export function rFromDefinition(theta: number, alpha: number): Estimate {
   return estimate(numerator / denominator);
 }
 
-/** The two points the module contrasts. Everything else is the reader's to explore. */
+/** The two points the prose contrasts. */
 export const SAFE_THETA = Math.PI / 3;
 export const DEGENERATE_THETA = 0;
 
-/** The values of alpha shown in the side-by-side tables. */
+/** The values of alpha in the explanation's table. */
 export const WITNESS_ALPHAS: readonly number[] = [0.1, 0.01, 0.001, 0.0001];
 
 /**
- * The one alpha the interactive part of the module runs at.
- *
- * The slider has two controls, order and theta, so alpha has to be a constant —
- * and which constant matters. The module's claim is that at theta = pi/3 the
- * displayed value stops changing once first order is kept, but the first-order
- * and second-order values differ by about 0.67 alpha, so that claim is only
- * true on screen if alpha is small enough for the difference to fall below the
- * displayed precision. At alpha = 0.001 and three decimals both read -0.577,
- * and the degenerate point reads a satisfying -2000.000.
- */
-export const ALPHA = 0.001;
-
-/** Decimal places for R on screen. Chosen with ALPHA; see above. */
-export const R_DECIMALS = 3;
-
-/* ------------------------------------------------------------------------- *
- * Two different questions
- *
- * rho compares what a truncation retained against the leading thing it threw
- * away. It answers the relative question: is the leading scale of the answer
- * still present? It does not, on its own, answer whether a requested limit
- * survives — at theta = pi/2 the first-order numerator is exactly zero, so rho
- * is zero, and yet the limit is zero and the truncation reproduces it.
- *
- * The quantity that settles a requested limit is the discarded effect itself,
- * E = |F - F_trunc|, measured after every later operation. Truncation preserves
- * a finite limit when the substituted expression stays defined and E tends to
- * zero. Both are computed here; the module keeps them apart deliberately,
- * because conflating them is its own kind of false belief.
- * ------------------------------------------------------------------------- */
-
-export interface RhoPart {
-  /** Size of everything retained, at this alpha. */
-  kept: number;
-  /** Size of the leading term discarded, at this alpha. */
-  dropped: number;
-  /** kept / dropped. Infinite when nothing was discarded. */
-  rho: number;
-}
-
-export interface RhoReport {
-  numerator: RhoPart;
-  denominator: RhoPart;
-  /** The smaller of the two: a truncation is only as good as its worse half. */
-  binding: number;
-}
-
-/** How far past the truncation to look for the leading discarded term. */
-const DROPPED_TERM_SEARCH_DEPTH = 4;
-
-export function rhoFor(part: Part, theta: number, alpha: number, order: Order): RhoPart {
-  const kept = Math.abs(truncatedPart(part, theta, alpha, order));
-
-  let dropped = 0;
-  for (let k = order + 1; k <= order + DROPPED_TERM_SEARCH_DEPTH; k += 1) {
-    const term = Math.abs(seriesCoefficient(part, theta, k) * Math.pow(alpha, k));
-    if (term !== 0) {
-      dropped = term;
-      break;
-    }
-  }
-
-  return {
-    kept,
-    dropped,
-    rho: dropped === 0 ? Number.POSITIVE_INFINITY : kept / dropped,
-  };
-}
-
-export function rho(theta: number, alpha: number, order: Order): RhoReport {
-  const numerator = rhoFor('numerator', theta, alpha, order);
-  const denominator = rhoFor('denominator', theta, alpha, order);
-  const binding = Math.min(numerator.rho, denominator.rho);
-  return { numerator, denominator, binding };
-}
-
-/**
  * E = |F - F_trunc|: how far the truncated expression sits from the exact one,
- * after everything that happens to it later. This is what decides whether a
- * requested limit survives; watching it shrink as the small quantity shrinks is
- * the check the module asks for. Null when either side is not a value, because
- * a distance from a non-value is not a number.
+ * after everything that happens to it later. Null when either side is not a
+ * value, because a distance from a non-value is not a number.
  */
 export function truncationError(exact: Estimate, truncated: Estimate): number | null {
   if (!isValue(exact) || !isValue(truncated)) return null;
   return Math.abs(exact.value - truncated.value);
 }
 
-/** The same ratio for the hook: what survives the cancellation, over what was lost. */
-export function hookRho(n: number): RhoPart {
-  const kept = Math.abs(hook.naiveValue(n));
-  const dropped = Math.abs(hook.droppedTerm(n));
+/* ------------------------------------------------------------------------- *
+ * The window around theta = 0 where the "smaller" term is the bigger one
+ * ------------------------------------------------------------------------- */
+
+/** The values of alpha the panel offers, largest first. */
+export const ALPHAS: readonly number[] = [0.3, 0.2, 0.1, 0.05, 0.03, 0.02, 0.01, 0.005, 0.002, 0.001];
+export const DEFAULT_ALPHA_INDEX = 3;
+
+export function alphaAt(index: number): number {
+  return ALPHAS[Math.max(0, Math.min(ALPHAS.length - 1, index))] as number;
+}
+
+/**
+ * The theta control works in units of alpha/10, carried as an integer, so the
+ * window scales with alpha and the point theta = 0 is exactly reachable. The
+ * true pole of R sits at theta = -alpha/2, which is index -5: also exact.
+ */
+export const THETA_INDEX = { min: -40, max: 40, perAlpha: 10 } as const;
+
+export function thetaFromIndex(index: number, alpha: number): number {
+  return (index * alpha) / THETA_INDEX.perAlpha;
+}
+
+/** The window the panel draws: four alphas either side of zero. */
+export function thetaWindow(alpha: number): readonly [number, number] {
+  return [thetaFromIndex(THETA_INDEX.min, alpha), thetaFromIndex(THETA_INDEX.max, alpha)];
+}
+
+export interface TermSizes {
+  /** |alpha sin theta|: the first-order term of the denominator, which the truncation keeps. */
+  kept: number;
+  /** |alpha^2 cos theta / 2|: the second-order term, which it drops. */
+  dropped: number;
+}
+
+export function termSizes(theta: number, alpha: number): TermSizes {
   return {
-    kept,
-    dropped,
-    rho: dropped === 0 ? Number.POSITIVE_INFINITY : kept / dropped,
+    kept: Math.abs(seriesCoefficient('denominator', theta, 1) * alpha),
+    dropped: Math.abs(seriesCoefficient('denominator', theta, 2) * alpha * alpha),
   };
 }
 
-/* ------------------------------------------------------------------------- *
- * Driving theta through the degenerate point
- * ------------------------------------------------------------------------- */
+/** rho = kept / dropped for the denominator. Below one, the truncation is upside down. */
+export function rhoDenominator(theta: number, alpha: number): number {
+  const { kept, dropped } = termSizes(theta, alpha);
+  return dropped === 0 ? Number.POSITIVE_INFINITY : kept / dropped;
+}
 
 /**
- * The theta control works in whole degrees.
- *
- * This is the detent. A slider carrying radians as floats lands on 1e-17 rather
- * than 0 and shows a huge finite number exactly where the module needs
- * "indeterminate"; integers cannot miss. Degrees also put the two degenerate
- * points (0 and 180) and both interesting angles (60 and 90) on the grid.
+ * The half-width of the window in which the dropped term is the larger one:
+ * |alpha sin theta| < alpha^2 |cos theta| / 2, i.e. |tan theta| < alpha / 2.
  */
-export const THETA_MIN_DEGREES = -90;
-export const THETA_MAX_DEGREES = 270;
-export const THETA_STEP_DEGREES = 1;
-
-export function degreesToRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
+export function dominanceHalfWidth(alpha: number): number {
+  return Math.atan(alpha / 2);
 }
 
-export function radiansToDegrees(radians: number): number {
-  return Math.round((radians * 180) / Math.PI);
-}
-
-export interface SweepSample {
-  degrees: number;
+export interface WindowSample {
   theta: number;
-  value: Estimate;
+  exact: Estimate;
+  truncated: Estimate;
+  sizes: TermSizes;
 }
 
-/**
- * The truncated value across the whole range of theta, at a fixed order.
- *
- * Sweeping this at first order is the module's key interaction: the value grows
- * without bound on the approach to theta = 0 and then stops being a value at
- * all. Generated here rather than in the widget so the shape of that transition
- * is testable.
- */
-export function thetaSweep(
-  order: Order,
-  alpha: number = ALPHA,
-  step: number = THETA_STEP_DEGREES,
-): SweepSample[] {
-  const samples: SweepSample[] = [];
-  for (let degrees = THETA_MIN_DEGREES; degrees <= THETA_MAX_DEGREES; degrees += step) {
-    const theta = degreesToRadians(degrees);
-    samples.push({ degrees, theta, value: rTruncated(theta, alpha, order) });
+/** Both curves of the second panel across the window, at every reachable theta. */
+export function windowSweep(alpha: number, order: Order): WindowSample[] {
+  const samples: WindowSample[] = [];
+  for (let index = THETA_INDEX.min; index <= THETA_INDEX.max; index += 1) {
+    const theta = thetaFromIndex(index, alpha);
+    samples.push({
+      theta,
+      exact: rExact(theta, alpha),
+      truncated: rTruncated(theta, alpha, order),
+      sizes: termSizes(theta, alpha),
+    });
   }
   return samples;
 }
 
-/* ------------------------------------------------------------------------- *
- * The bank
- * ------------------------------------------------------------------------- */
-
-export interface BankEntry {
-  id: string;
-  /** Where it sits in the run: worked through, to try, or the closer. */
-  slot: string;
-  /** Paper and question, as a citation. No question text appears anywhere. */
-  question: string;
-  amplifiers: readonly Amplifier[];
-  /**
-   * Why rho collapses, one line per mechanism.
-   *
-   * A question filed under two mechanisms is there for two different reasons,
-   * and one paragraph repeated in both drawers says neither of them. Keying the
-   * reason to the mechanism is what makes the second appearance worth reading.
-   */
-  why: Readonly<Partial<Record<Amplifier, string>>>;
-  paper: string;
-}
-
-/**
- * Organised by amplifier, never by topic.
- *
- * A topic taxonomy — surds, trigonometry, series, binomial, probability —
- * teaches surface pattern-matching, which is the habit this module exists to
- * break. Sorting by mechanism is the part that transfers.
- *
- * Every entry is a citation and a paraphrase. No question text is reproduced;
- * see the standing rule in CONTRIBUTING.md.
- */
-export const BANK: readonly BankEntry[] = [
-  {
-    id: 'step3-2024-q2',
-    slot: 'Worked',
-    question: '2024 STEP 3, Q2(ii)(a)',
-    amplifiers: ['cancellation'],
-    why: { cancellation: 'The leading terms cancel exactly, and what is left under the root decides the answer. The cheapest example in the bank: start here.' },
-    paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
-  },
-  {
-    id: 'step3-2022-q6',
-    slot: 'Worked',
-    question: '2022 STEP 3, Q6',
-    amplifiers: ['cancellation'],
-    why: { cancellation: 'The leading coefficient vanishes at the one point the question asks about — the witness worked through above.' },
-    paper: 'https://step.maths.org/sites/default/files/2023-06/2022STEP3Mock.pdf',
-  },
-  {
-    id: 'step3-2024-q11',
-    slot: 'Closer',
-    question: '2024 STEP 3, Q11(iii)–(iv)',
-    amplifiers: ['cancellation'],
-    why: { cancellation: 'The term you would discard is the entire answer. Simplify it away and the question evaporates.' },
-    paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
-  },
-  {
-    id: 'step3-2023-q2',
-    slot: 'Try',
-    question: '2023 STEP 3, Q2(iv)',
-    amplifiers: ['cancellation', 'multiplication'],
-    why: {
-      cancellation:
-        'Substitute α = 0 and both parts of the area vanish, so you report zero for a region you sketched two parts earlier and watched grow with k. The whole area sits in what the substitution threw away. Sketch the region first: the contradiction only lands if the picture is yours.',
-      multiplication:
-        'α is not free — the intersection ties it to k — and the discarded terms come back multiplied by k and by k². One of them survives at first order in α and the other only at second, so a single choice of order is right for one term and wrong for the other.',
-    },
-    paper: 'https://step.maths.org/sites/default/files/2025-02/2023STEP3Mock.pdf',
-  },
-  {
-    id: 'step2-2021-q6',
-    slot: 'Try',
-    question: '2021 STEP 2, Q6(iii)–(iv)',
-    amplifiers: ['cancellation', 'multiplication'],
-    why: {
-      cancellation:
-        'Two widths are each much smaller than the radius, which says nothing about how they compare with each other: their ratio tends to 1/(1 − cos α), which is order one. The distance saved contains their difference, so dropping one against the other is wrong by a factor rather than by a little.',
-      multiplication:
-        'The angle you have just proved is much less than 1 arrives multiplied by the radius, which is large. It carries as much of the distance saved as the difference of widths does — small next to R is not small once R multiplies it.',
-    },
-    paper: 'https://step.maths.org/sites/default/files/2023-06/STEP_2_2021_Mock_0.pdf',
-  },
-  {
-    id: 'step2-2024-q11',
-    slot: 'Try',
-    question: '2024 STEP 2, Q11(iv)',
-    amplifiers: ['multiplication'],
-    why: { multiplication: 'The expansion is in pk, not in p, so the approximation is excellent at one group size and nonsense at another. Find the size where it breaks.' },
-    paper: 'https://step.maths.org/sites/default/files/2025-06/STEP2_2024_Mock.pdf',
-  },
-  {
-    id: 'step3-2024-q3',
-    slot: 'Stretch',
-    question: '2024 STEP 3, Q3',
-    amplifiers: ['multiplication'],
-    why: { multiplication: 'A threshold that naive limiting cannot see at all.' },
-    paper: 'https://step.maths.org/sites/default/files/2025-06/STEP3_2024_Mock.pdf',
-  },
-];
-
-/**
- * What is actually behind a bank link.
- *
- * Every one of these goes to a STEP Support Programme worked paper, which
- * carries the question, a full solution to every part and the examiner's report
- * in one document. That is worth saying out loud twice over: the module told the
- * reader these were the official papers, which they are not, and a bank of
- * questions to work should not drop somebody into a model answer without warning
- * them first.
- */
-export const BANK_LINK_NOTE =
-  'Each link is a worked paper from the STEP Support Programme: the question, a full solution to every part, and the examiner\'s report. Work the question before you open it.';
-
-export interface BankGroup {
-  amplifier: Amplifier;
-  entries: readonly BankEntry[];
-}
-
-/**
- * The bank grouped by mechanism. A question driven by both amplifiers appears
- * under both, because it is an example of each.
- */
-export function bankByAmplifier(bank: readonly BankEntry[] = BANK): BankGroup[] {
-  return AMPLIFIERS.map((amplifier) => ({
-    amplifier,
-    entries: bank.filter((entry) => entry.amplifiers.includes(amplifier)),
-  })).filter((group) => group.entries.length > 0);
-}
-
-/* ------------------------------------------------------------------------- *
- * Measurement
- * ------------------------------------------------------------------------- */
-
-/**
- * The same ratio the other way up.
- *
- * The transfer item asks where first-order expansion fails for the reciprocal.
- * The answer is deliberately not the one the module taught, so it is worked out
- * here from the same machinery rather than written down: whichever part is on
- * the bottom is the part whose leading coefficient has to survive.
- */
-export function reciprocalTruncated(theta: number, alpha: number, order: Order): Estimate {
-  const numerator = truncatedPart('denominator', theta, alpha, order);
-  const denominator = truncatedPart('numerator', theta, alpha, order);
-  if (denominator === 0) {
-    return indeterminate(numerator === 0 ? 'nothing-retained' : 'retained-denominator-vanishes');
-  }
-  return estimate(numerator / denominator);
-}
-
-/** Where first-order expansion fails, in degrees over [0, 360). */
-export function degeneratePointsOf(
-  which: 'r' | 'reciprocal',
-  alpha: number = ALPHA,
-): number[] {
-  const evaluate = which === 'r' ? rTruncated : reciprocalTruncated;
-  const points: number[] = [];
-  for (let degrees = 0; degrees < 360; degrees += 1) {
-    if (!isValue(evaluate(degreesToRadians(degrees), alpha, 1))) points.push(degrees);
-  }
-  return points;
-}
-
-/**
- * Truncating too early makes the answer too small here: the naive move keeps
- * nothing, and nothing is below the true value. Read off rather than asserted,
- * because the other direction is just as common — a truncation that leaves a
- * confident wrong number that is too big.
- */
-export function hookErrorDirection(): 'too big' | 'too small' {
-  return hook.naiveValue(1) < hook.limit ? 'too small' : 'too big';
-}
-
-export interface OrderItem {
-  id: string;
-  /** The limit, in plain text: the island does not typeset. */
-  text: string;
-  /** Computed stably, never written down. */
-  limit(): number;
-  /** How many orders past the leading one you have to keep. */
-  ordersPastLeading: number;
-  /** What makes it that many, once they have answered. */
-  because: string;
-}
-
-/**
- * M1. Order prediction with no computation — the skill on its own, and immune
- * to having seen the question before.
- */
-export const ORDER_ITEMS: readonly OrderItem[] = [
-  {
-    id: 'root-x-squared-plus-3x',
-    text: 'lim (x → ∞) of √(x² + 3x) − x',
-    // Rearranged to 3x / (√(x² + 3x) + x): the subtraction loses its own answer.
-    limit: () => {
-      const x = 1e8;
-      return (3 * x) / (Math.sqrt(x * x + 3 * x) + x);
-    },
-    ordersPastLeading: 1,
-    because: 'The x terms cancel, so the answer sits one power further on.',
-  },
-  {
-    id: 'tan-minus-sin',
-    text: 'lim (x → 0) of (tan x − sin x) / x³',
-    limit: () => {
-      const x = 1e-3;
-      return (Math.tan(x) - Math.sin(x)) / (x * x * x);
-    },
-    ordersPastLeading: 2,
-    because:
-      'Both expansions agree at first order and the squared terms are absent from each, so the cubes are the first to differ — two powers past the leading one.',
-  },
-  {
-    id: 'cos-quartic',
-    text: 'lim (n → ∞) of n⁴(cos(1/n) − 1 + 1/(2n²))',
-    limit: () => {
-      const n = 100;
-      return Math.pow(n, 4) * (Math.cos(1 / n) - 1 + 1 / (2 * n * n));
-    },
-    ordersPastLeading: 4,
-    because:
-      'Two terms of the cosine are cancelled by hand and the odd powers are absent, so the first surviving term is four powers past the leading one. The zero coefficients are still powers you have to pass.',
-  },
-];
-
-/**
- * Cross-context transfer.
- *
- * Four shortcuts of the same shape — replace the small quantity by zero — where
- * the reader has to say which ones keep the limit they were asked for. Nothing
- * about the small quantity distinguishes them; what distinguishes them is
- * whether the discarded effect still vanishes once everything later has been
- * done to it. Each case computes both sides, so the key is derived rather than
- * declared.
- */
-export interface TransferCase {
-  id: string;
-  /** The expression, in plain text. */
-  text: string;
-  /** What substituting zero for the small quantity gives you. */
-  shortcutText: string;
-  /** Evaluated honestly at n. */
-  exact(n: number): number;
-  /** The value the shortcut returns — for these, independent of n. */
-  shortcut(n: number): number;
-  expectedLimit: number;
-  /** Why it does or does not survive, shown after the answer. */
-  because: string;
-}
-
-export const TRANSFER_CASES: readonly TransferCase[] = [
-  {
-    id: 'a',
-    text: '(3n² + 1) / (n² + 2) as n → ∞',
-    shortcutText: 'divide through by n² and drop the 1/n² terms',
-    exact: (n) => (3 * n * n + 1) / (n * n + 2),
-    shortcut: () => 3,
-    expectedLimit: 3,
-    because: 'Nothing later multiplies the discarded terms back up: the effect vanishes.',
-  },
-  {
-    id: 'b',
-    text: 'n(√(n² + 1) − n) as n → ∞',
-    shortcutText: 'round the root down to n',
-    exact: (n) => n / (Math.sqrt(n * n + 1) + n),
-    shortcut: () => 0,
-    expectedLimit: 0.5,
-    because:
-      'The factor of n outside multiplies the discarded remainder back to full size. The effect does not vanish, and the shortcut loses the whole answer.',
-  },
-  {
-    id: 'c',
-    text: '(n + 1) / (2n + 3) as n → ∞',
-    shortcutText: 'divide through by n and drop the 1/n terms',
-    exact: (n) => (n + 1) / (2 * n + 3),
-    shortcut: () => 0.5,
-    expectedLimit: 0.5,
-    because: 'The discarded terms are divided away rather than amplified.',
-  },
-  {
-    id: 'd',
-    text: 'sin(1/n) as n → ∞',
-    shortcutText: 'replace 1/n by zero',
-    exact: (n) => Math.sin(1 / n),
-    shortcut: () => 0,
-    expectedLimit: 0,
-    because:
-      'Here the shortcut and the limit agree at zero, and nothing afterwards magnifies the difference.',
-  },
-];
-
-/**
- * Whether the shortcut lands on the limit. Read off the two computed values
- * rather than asserted, so the key cannot drift from the maths.
- */
-export function transferPreservesLimit(item: TransferCase, n = 1_000_000): boolean {
-  return Math.abs(item.shortcut(n) - item.expectedLimit) < 1e-6;
-}
-
-/** The key for the transfer item, in the exact form the widget submits. */
-export function transferAnswerKey(): string {
-  return canonicalSelection(
-    TRANSFER_CASES.filter((item) => transferPreservesLimit(item)).map((item) => item.id),
-  );
-}
-
-export function marksTransferCases(response: string): boolean {
-  return response === transferAnswerKey();
-}
-
-/**
- * The answer key for the transfer item, in the exact form the widget submits.
- * Built through the same canonical ordering as the response so the two cannot
- * drift apart — they did once, and the item became unpassable.
- */
-export function reciprocalPointsKey(): string {
-  return canonicalSelection(degeneratePointsOf('reciprocal').map(String));
-}
-
-/** Marks the transfer item. The taught answer is not accepted. */
-export function marksReciprocalPoints(response: string): boolean {
-  return response === reciprocalPointsKey();
-}
-
-/** How many orders past leading the learner says are needed. Whole numbers only. */
-export function parseOrderAnswer(raw: string): number | null {
-  const text = raw.trim();
-  return /^\d+$/.test(text) ? Number(text) : null;
-}
-
-/**
- * The simplest fraction within tolerance of a value, by continued fractions.
- * Limits computed numerically are far more legible written as 1/24 than as
- * 0.041666, and the fraction is derived rather than typed beside it.
- */
-export function toFraction(
-  value: number,
-  tolerance = 1e-4,
-  maxDenominator = 1000,
-): { numerator: number; denominator: number } | null {
-  const sign = value < 0 ? -1 : 1;
-  const magnitude = Math.abs(value);
-
-  let lowerN = 0;
-  let lowerD = 1;
-  let upperN = 1;
-  let upperD = 0;
-
-  for (let guard = 0; guard < 64; guard += 1) {
-    const mediantN = lowerN + upperN;
-    const mediantD = lowerD + upperD;
-    if (mediantD > maxDenominator) return null;
-
-    const mediant = mediantN / mediantD;
-    if (Math.abs(mediant - magnitude) < tolerance) {
-      return { numerator: sign * mediantN, denominator: mediantD };
-    }
-    if (mediant < magnitude) {
-      lowerN = mediantN;
-      lowerD = mediantD;
-    } else {
-      upperN = mediantN;
-      upperD = mediantD;
-    }
-  }
-  return null;
-}
+/** How far the R chart's frame extends, in units of 1/alpha: -2/alpha at theta = 0 must fit. */
+export const R_FRAME = 3;
 
 /* ------------------------------------------------------------------------- *
  * Display
  * ------------------------------------------------------------------------- */
 
-/** Shared with every module: see src/lib/numbers.ts. */
 export { formatFixed };
 
 const SUPERSCRIPTS: Readonly<Record<string, string>> = {
-  '0': '\u2070',
-  '1': '\u00b9',
-  '2': '\u00b2',
-  '3': '\u00b3',
-  '4': '\u2074',
-  '5': '\u2075',
-  '6': '\u2076',
-  '7': '\u2077',
-  '8': '\u2078',
-  '9': '\u2079',
-  '-': '\u207b',
+  '0': '⁰',
+  '1': '¹',
+  '2': '²',
+  '3': '³',
+  '4': '⁴',
+  '5': '⁵',
+  '6': '⁶',
+  '7': '⁷',
+  '8': '⁸',
+  '9': '⁹',
+  '-': '⁻',
 };
 
 /** Exponents as real superscript characters: they read aloud correctly too. */
@@ -918,6 +412,9 @@ export function formatSmall(value: number): string {
   return `${formatFixed(mantissa, 1)} × 10${superscript(exponent)}`;
 }
 
+/** Decimal places for R on screen. */
+export const R_DECIMALS = 3;
+
 /**
  * Values near a pole run away faster than a fixed-decimal column can hold. Past
  * the point where the digits stop meaning anything, say the size instead.
@@ -933,30 +430,24 @@ export function formatLarge(value: number, decimals: number = R_DECIMALS): strin
 }
 
 /**
- * What a reader sees in place of a value that does not exist.
- *
- * Not "indeterminate": the expression itself is perfectly determinate, and it is
- * the approximation that has kept too little to report anything. Naming the
- * approximation rather than the maths is the honest description, and it is the
- * distinction the whole module turns on.
+ * What a reader sees in place of a value that does not exist. The expression
+ * itself is perfectly determinate; it is the approximation that has kept too
+ * little to report anything, and the wording says which.
  */
-export const INDETERMINATE_LABEL = 'approximation unavailable';
+export const INDETERMINATE_LABELS: Readonly<Record<IndeterminateReason, string>> = {
+  'nothing-retained': '0/0 — nothing kept',
+  'retained-denominator-vanishes': 'kept denominator is 0',
+  divergent: 'no value: a pole',
+  'not-degenerate': 'not at a cusp',
+};
 
 export function formatEstimate(e: Estimate, decimals: number): string {
-  return isValue(e) ? formatFixed(e.value, decimals) : INDETERMINATE_LABEL;
+  return isValue(e) ? formatFixed(e.value, decimals) : INDETERMINATE_LABELS[e.reason];
 }
 
 /** The live readout beside the controls, where the value may be running away. */
 export function formatReadout(e: Estimate): string {
-  return isValue(e) ? formatLarge(e.value) : INDETERMINATE_LABEL;
-}
-
-/** A limit written the way it would be written by hand, where that is possible. */
-export function formatLimit(value: number): string {
-  const fraction = toFraction(value);
-  if (!fraction) return formatFixed(value, 4);
-  if (fraction.denominator === 1) return String(fraction.numerator);
-  return `${fraction.numerator}/${fraction.denominator}`;
+  return isValue(e) ? formatLarge(e.value) : INDETERMINATE_LABELS[e.reason];
 }
 
 /** rho, which is unbounded whenever the truncation discards nothing at all. */
@@ -965,4 +456,16 @@ export function formatRho(value: number): string {
   if (value === 0) return '0';
   if (value >= 1000) return formatLarge(value, 0);
   return formatFixed(value, value < 10 ? 2 : 0);
+}
+
+/** A theta from the window control, as a multiple of alpha and in radians. */
+export function formatWindowTheta(index: number, alpha: number): string {
+  const multiple = index / THETA_INDEX.perAlpha;
+  const radians = thetaFromIndex(index, alpha);
+  const sign = multiple < 0 ? '−' : '';
+  return `${sign}${formatFixed(Math.abs(multiple), 1)}α = ${formatFixed(radians, 4)}`;
+}
+
+export function formatN(n: number): string {
+  return n.toLocaleString('en-GB');
 }

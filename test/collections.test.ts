@@ -43,8 +43,8 @@ describe('the draft field', () => {
     title: 'X',
     claim: 'c',
     context: 'general',
-    hypotheses: [{ id: 'h', statement: 's', violatedBy: 'v' }],
-    predictionPrompt: 'p',
+    summary: 'one line',
+    hypotheses: [{ id: 'h', label: 'l', statement: 's', violatedBy: 'v' }],
     decisiveQuantity: { symbol: 's', name: 'n', description: 'd' },
     repairedIntuition: 'r',
     boundary: 'b',
@@ -57,10 +57,10 @@ describe('the draft field', () => {
     expect(parsed.draft).toBe(false);
   });
 
-  it('is the only optional field in the schema', () => {
+  it('is optional, alongside the featured question a draft may not have yet', () => {
     const optional = Object.entries(moduleSchema.shape)
       .filter(([, field]) => field.isOptional())
       .map(([name]) => name);
-    expect(optional).toEqual(['draft']);
+    expect(optional.sort()).toEqual(['draft', 'question']);
   });
 });

@@ -8,7 +8,16 @@ import {
   type ChartFrame,
   type ScaleType,
   type Series,
+  type SeriesTone,
 } from './types';
+
+export interface ChartPoint {
+  x: number;
+  y: number;
+  label?: string;
+  tone?: SeriesTone;
+  open?: boolean;
+}
 
 export interface LineChartProps extends ChartFrame {
   series: readonly Series[];
@@ -21,15 +30,22 @@ export interface LineChartProps extends ChartFrame {
   bands?: readonly Band[];
   /** Horizontal reference lines, in y units — limits, bounds, targets. */
   rules?: readonly { at: number; label?: string; tone?: 'primary' | 'break' }[];
-  /**
-   * Vertical reference lines, in x units. Where the reader currently is, and
-   * where the interesting points are.
-   */
-  guides?: readonly { at: number; label?: string; tone?: 'primary' | 'break' }[];
+  /** Vertical reference lines, in x units: where the reader is, and where the interesting points are. */
+  guides?: readonly {
+    at: number;
+    label?: string;
+    tone?: 'primary' | 'break';
+    /** Where the label sits. Two guides close together can take one end each. */
+    labelAt?: 'top' | 'bottom';
+  }[];
+  /** Single marked points: the reader's current position on a curve. */
+  points?: readonly ChartPoint[];
+  xTickCount?: number;
+  yTickCount?: number;
 }
 
 function extent(values: readonly number[], positiveOnly: boolean): [number, number] {
-  const usable = positiveOnly ? values.filter((v) => v > 0) : values;
+  const usable = values.filter((v) => Number.isFinite(v) && (!positiveOnly || v > 0));
   if (usable.length === 0) return [0, 1];
   let min = usable[0] as number;
   let max = usable[0] as number;
@@ -43,7 +59,9 @@ function extent(values: readonly number[], positiveOnly: boolean): [number, numb
 
 /**
  * A line chart with optional log axes. The workhorse: sequences converging (or
- * not), functions and their approximations, error against n.
+ * not), functions and their approximations, error against n. Non-finite values
+ * break the line rather than being drawn, so a curve that leaves the frame is
+ * seen leaving.
  */
 export function LineChart({
   series,
@@ -54,12 +72,15 @@ export function LineChart({
   bands = [],
   rules = [],
   guides = [],
+  points = [],
   width = 640,
-  height = 340,
+  height = 320,
   xLabel,
   yLabel,
   ariaLabel,
   caption,
+  xTickCount,
+  yTickCount,
 }: LineChartProps) {
   const m = DEFAULT_MARGIN;
   const innerWidth = width - m.left - m.right;
@@ -80,19 +101,21 @@ export function LineChart({
     .range([innerHeight, 0]);
   if (!yDomain && yScale === 'linear') y.nice();
 
+  const inFrame = (px: number, py: number) =>
+    Number.isFinite(px) &&
+    Number.isFinite(py) &&
+    (xScale !== 'log' || px > 0) &&
+    (yScale !== 'log' || py > 0);
+
   const path = d3line<readonly [number, number]>()
     .x((p) => x(p[0]))
     .y((p) => y(p[1]))
-    .defined(
-      (p) =>
-        Number.isFinite(p[0]) &&
-        Number.isFinite(p[1]) &&
-        (xScale !== 'log' || p[0] > 0) &&
-        (yScale !== 'log' || p[1] > 0),
-    );
+    .defined((p) => inFrame(p[0], p[1]));
+
+  const clampX = (v: number) => Math.max(0, Math.min(innerWidth, x(v)));
 
   return (
-    <figure>
+    <figure className="chart-figure">
       <svg
         className="chart"
         viewBox={`0 0 ${width} ${height}`}
@@ -102,17 +125,32 @@ export function LineChart({
       >
         <g transform={`translate(${m.left},${m.top})`}>
           {bands.map((b, i) => {
-            const from = Math.min(x(b.from), x(b.to));
-            const to = Math.max(x(b.from), x(b.to));
+            const from = Math.min(clampX(b.from), clampX(b.to));
+            const to = Math.max(clampX(b.from), clampX(b.to));
             return (
-              <rect
-                key={`band-${i}`}
-                x={from}
-                y={0}
-                width={Math.max(0, to - from)}
-                height={innerHeight}
-                fill={b.tone === 'break' ? 'var(--chart-band-break)' : 'var(--chart-band)'}
-              />
+              <g key={`band-${i}`}>
+                <rect
+                  x={from}
+                  y={0}
+                  width={Math.max(0, to - from)}
+                  height={innerHeight}
+                  fill={b.tone === 'break' ? 'var(--chart-band-break)' : 'var(--chart-band)'}
+                />
+                {b.label ? (
+                  // Break-tone labels sit at the foot of the band, primary at
+                  // the head, so two bands covering the same stretch can both
+                  // be read.
+                  <text
+                    className="tick-label"
+                    x={(from + to) / 2}
+                    y={(b.labelAt ?? (b.tone === 'break' ? 'bottom' : 'top')) === 'bottom' ? innerHeight - 6 : 12}
+                    textAnchor="middle"
+                    fill={b.tone === 'break' ? 'var(--chart-2)' : 'var(--chart-1)'}
+                  >
+                    {b.label}
+                  </text>
+                ) : null}
+              </g>
             );
           })}
 
@@ -123,6 +161,8 @@ export function LineChart({
             innerHeight={innerHeight}
             xLabel={xLabel}
             yLabel={yLabel}
+            {...(xTickCount !== undefined ? { xTickCount } : {})}
+            {...(yTickCount !== undefined ? { yTickCount } : {})}
           />
 
           {rules.map((r, i) => (
@@ -137,8 +177,6 @@ export function LineChart({
                 strokeWidth={1.5}
               />
               {r.label ? (
-                // Left-aligned: the right-hand end of the frame belongs to the
-                // x-axis title, and a rule sitting near the axis would collide.
                 <text
                   className="tick-label"
                   x={4}
@@ -161,13 +199,13 @@ export function LineChart({
                 y2={innerHeight}
                 stroke={g.tone === 'break' ? 'var(--chart-2)' : 'var(--chart-axis)'}
                 strokeDasharray={g.tone === 'break' ? undefined : '3 3'}
-                strokeWidth={g.tone === 'break' ? 2 : 1}
+                strokeWidth={g.tone === 'break' ? 1.5 : 1}
               />
               {g.label ? (
                 <text
                   className="tick-label"
                   x={x(g.at)}
-                  y={-2}
+                  y={g.labelAt === 'bottom' ? innerHeight - 6 : -2}
                   textAnchor="middle"
                   fill={g.tone === 'break' ? 'var(--chart-2)' : 'var(--ink-faint)'}
                 >
@@ -189,20 +227,43 @@ export function LineChart({
                   strokeDasharray={s.dashed ? '5 4' : undefined}
                 />
                 {s.markers
-                  ? s.points.map((p, i) => (
-                      <circle
-                        key={`${s.id}-${i}`}
-                        className="point"
-                        cx={x(p[0])}
-                        cy={y(p[1])}
-                        r={3}
-                        fill={colour}
-                      />
-                    ))
+                  ? s.points
+                      .filter((p) => inFrame(p[0], p[1]))
+                      .map((p, i) => (
+                        <circle
+                          key={`${s.id}-${i}`}
+                          className="point"
+                          cx={x(p[0])}
+                          cy={y(p[1])}
+                          r={3}
+                          fill={colour}
+                        />
+                      ))
                   : null}
               </g>
             );
           })}
+
+          {points
+            .filter((p) => inFrame(p.x, p.y))
+            .map((p, i) => {
+              const colour = TONE_VAR[p.tone ?? 'primary'];
+              return (
+                <g key={`pt-${i}`} transform={`translate(${x(p.x)},${y(p.y)})`}>
+                  <circle
+                    r={5}
+                    fill={p.open ? 'var(--paper-raised)' : colour}
+                    stroke={colour}
+                    strokeWidth={2}
+                  />
+                  {p.label ? (
+                    <text className="tick-label" x={8} dy="0.32em" fill={colour}>
+                      {p.label}
+                    </text>
+                  ) : null}
+                </g>
+              );
+            })}
         </g>
       </svg>
 
@@ -211,7 +272,7 @@ export function LineChart({
           {series.map((s) => (
             <span key={s.id}>
               <span
-                className="swatch"
+                className={`swatch${s.dashed ? ' swatch-dashed' : ''}`}
                 style={{ background: TONE_VAR[s.tone ?? 'primary'] }}
                 aria-hidden="true"
               />

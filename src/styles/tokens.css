@@ -10,64 +10,71 @@
 
 :root {
   /* ---- Palette: light ------------------------------------------------- */
-  --paper: #fcfcfa;
+  --paper: #fbfbf8;
   --paper-raised: #ffffff;
-  --paper-sunken: #f2f1ec;
-  --ink: #1b1b1a;
-  --ink-muted: #55534e;
-  --ink-faint: #86837c;
-  --rule: #e0ded6;
-  --rule-strong: #c9c6bc;
+  --paper-sunken: #f3f2ed;
+  --paper-deep: #eae9e2;
+  --ink: #16171b;
+  --ink-muted: #4d5058;
+  --ink-faint: #7e8189;
+  --rule: #e4e3dc;
+  --rule-strong: #c9c8c0;
 
   /* Accent carries links, the decisive quantity, and the primary chart series. */
-  --accent: #2f5d9e;
-  --accent-strong: #23477a;
-  --accent-wash: #eaf0f9;
+  --accent: #1f4f8f;
+  --accent-strong: #163b6c;
+  --accent-wash: #e8eef8;
+  --on-accent: #ffffff;
 
-  /* Break beat: where the claim fails. Warm, never alarming. */
-  --break: #a4501d;
-  --break-wash: #fbf0e7;
+  /* Break: where the claim fails. Warm, never alarming. */
+  --break: #b5531c;
+  --break-wash: #fbeee3;
 
   /* Reserved for one thing: a quantity that is not a value at all. It has to
      read as a different kind of state, not a worse number, so it is the only
      true red in the palette. */
   --indeterminate: #b3261e;
 
-  /* Repair beat: the corrected model. */
-  --repair: #2f6b4f;
-  --repair-wash: #e9f2ed;
+  /* Repair: the corrected model, and where the claim is fine. */
+  --repair: #2b6b4c;
+  --repair-wash: #e6f1ea;
 
   /* Chart series. Ordered; use in sequence. Distinguishable in both themes
      and for the common colour-vision deficiencies. */
-  --chart-1: #2f5d9e;
-  --chart-2: #a4501d;
-  --chart-3: #2f6b4f;
+  --chart-1: #1f4f8f;
+  --chart-2: #b5531c;
+  --chart-3: #2b6b4c;
   --chart-4: #6b4c9a;
-  --chart-grid: #e4e2da;
-  --chart-axis: #86837c;
-  --chart-band: rgba(47, 93, 158, 0.12);
-  --chart-band-break: rgba(164, 80, 29, 0.14);
+  --chart-grid: #e6e5de;
+  --chart-axis: #8a8d94;
+  --chart-band: rgba(31, 79, 143, 0.1);
+  --chart-band-break: rgba(181, 83, 28, 0.14);
 
   /* ---- Type ----------------------------------------------------------- */
-  --font-prose: ui-serif, Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
-  --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  --font-prose: 'Source Serif 4', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
+  --size-2xs: 0.7rem;
   --size-xs: 0.78rem;
   --size-sm: 0.875rem;
   --size-base: 1.0625rem;
-  --size-lg: 1.25rem;
-  --size-xl: 1.6rem;
-  --size-2xl: 2.1rem;
+  --size-lg: 1.2rem;
+  --size-xl: 1.5rem;
+  --size-2xl: 2rem;
+  --size-3xl: 2.75rem;
 
-  --leading-tight: 1.25;
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
   --leading-body: 1.65;
 
   --weight-normal: 400;
-  --weight-medium: 550;
+  --weight-medium: 500;
+  --weight-semibold: 600;
   --weight-bold: 700;
 
   --tracking-label: 0.08em;
+  --tracking-tight: -0.015em;
 
   /* ---- Space ---------------------------------------------------------- */
   --space-1: 0.25rem;
@@ -78,57 +85,61 @@
   --space-6: 2rem;
   --space-7: 3rem;
   --space-8: 4.5rem;
+  --space-9: 6rem;
 
   /* ---- Measure and layout --------------------------------------------- */
-  /* Prose measure, card measure, and the full content column. Cards sit between
-     the other two: readable, but not a ragged narrow column beside the widget. */
-  --measure: 34rem;
-  --measure-card: 42rem;
-  --measure-wide: 52rem;
+  --measure: 40rem;
+  --measure-card: 46rem;
+  --measure-wide: 68rem;
 
   /* ---- Surface ---------------------------------------------------------*/
-  --radius: 4px;
-  --radius-lg: 8px;
-  --shadow: 0 1px 2px rgba(27, 27, 26, 0.06), 0 4px 12px rgba(27, 27, 26, 0.04);
+  --radius: 6px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(22, 23, 27, 0.05), 0 6px 18px rgba(22, 23, 27, 0.05);
+  --shadow-raised: 0 2px 4px rgba(22, 23, 27, 0.06), 0 12px 32px rgba(22, 23, 27, 0.08);
   --focus-ring: 2px solid var(--accent);
   --focus-offset: 2px;
 
-  --duration: 120ms;
+  --duration: 140ms;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #16171a;
-    --paper-raised: #1d1f23;
-    --paper-sunken: #111214;
-    --ink: #e8e6e1;
-    --ink-muted: #a9a69f;
-    --ink-faint: #7c7973;
-    --rule: #2c2f34;
-    --rule-strong: #3d4147;
+    --paper: #141519;
+    --paper-raised: #1c1e23;
+    --paper-sunken: #101114;
+    --paper-deep: #0c0d10;
+    --ink: #e9e8e3;
+    --ink-muted: #aaa9a2;
+    --ink-faint: #7c7e85;
+    --rule: #2b2e35;
+    --rule-strong: #3f434b;
 
-    --accent: #86b0e6;
-    --accent-strong: #a8c8f0;
-    --accent-wash: #1a2534;
+    --accent: #8db4ea;
+    --accent-strong: #b0cbf2;
+    --accent-wash: #1a2536;
+    --on-accent: #0f1a2b;
 
-    --break: #e39a63;
-    --break-wash: #2a1f17;
+    --break: #e69b62;
+    --break-wash: #2b2018;
 
-    --indeterminate: #f08a80;
+    --indeterminate: #f28b81;
 
-    --repair: #7dbd9c;
-    --repair-wash: #16241d;
+    --repair: #7fc09e;
+    --repair-wash: #16251d;
 
-    --chart-1: #86b0e6;
-    --chart-2: #e39a63;
-    --chart-3: #7dbd9c;
-    --chart-4: #b49ae0;
-    --chart-grid: #26292e;
-    --chart-axis: #7c7973;
-    --chart-band: rgba(134, 176, 230, 0.16);
-    --chart-band-break: rgba(227, 154, 99, 0.16);
+    --chart-1: #8db4ea;
+    --chart-2: #e69b62;
+    --chart-3: #7fc09e;
+    --chart-4: #b79ee3;
+    --chart-grid: #262930;
+    --chart-axis: #7c7e85;
+    --chart-band: rgba(141, 180, 234, 0.14);
+    --chart-band-break: rgba(230, 155, 98, 0.16);
 
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.25);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 18px rgba(0, 0, 0, 0.3);
+    --shadow-raised: 0 2px 4px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.4);
   }
 }
 

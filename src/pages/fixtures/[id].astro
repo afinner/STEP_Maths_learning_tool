@@ -2,11 +2,12 @@
 import { getCollection, render } from 'astro:content';
 import ModuleLayout from '../../layouts/ModuleLayout.astro';
 import FixtureWidgetIsland from '../../components/FixtureWidgetIsland';
+import { fixtureSections } from '../../lib/sections';
 
 /**
  * Fixture routes. The collection is loaded — and therefore schema-validated — on
  * every build, but pages are only emitted when INCLUDE_FIXTURES=1 (`npm run dev`
- * and `npm run build:fixtures`). The production build validates the fixture and
+ * and `npm run build:preview`). The production build validates the fixture and
  * ships nothing.
  */
 export async function getStaticPaths() {
@@ -20,13 +21,12 @@ const { Content } = await render(entry);
 const widgetPath = `/src/fixtures/${entry.id}/widget.tsx`;
 ---
 
-<ModuleLayout data={entry.data} isFixture>
+<ModuleLayout data={entry.data} sections={fixtureSections(entry.id)} isFixture>
   <Content />
   <FixtureWidgetIsland
     slot="widget"
     client:load
     widgetPath={widgetPath}
     hypotheses={entry.data.hypotheses}
-    predictionPrompt={entry.data.predictionPrompt}
   />
 </ModuleLayout>

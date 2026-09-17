@@ -2,8 +2,8 @@
 import { getCollection, render } from 'astro:content';
 import ModuleLayout from '../../layouts/ModuleLayout.astro';
 import ModuleWidgetIsland from '../../components/ModuleWidgetIsland';
-import ModuleClosingIsland from '../../components/ModuleClosingIsland';
 import { includeDrafts, publishedModules } from '../../lib/collections';
+import { moduleSections } from '../../lib/sections';
 
 /**
  * One route for every module, now and forever. Adding a module means adding a
@@ -21,20 +21,12 @@ const { Content } = await render(entry);
 const widgetPath = `/src/content/modules/${entry.id}/widget.tsx`;
 ---
 
-<ModuleLayout data={entry.data}>
+<ModuleLayout data={entry.data} sections={moduleSections(entry.id)}>
   <Content />
   <ModuleWidgetIsland
     slot="widget"
     client:load
     widgetPath={widgetPath}
     hypotheses={entry.data.hypotheses}
-    predictionPrompt={entry.data.predictionPrompt}
-  />
-  <ModuleClosingIsland
-    slot="closing"
-    client:load
-    widgetPath={`/src/content/modules/${entry.id}/closing.tsx`}
-    hypotheses={entry.data.hypotheses}
-    predictionPrompt={entry.data.predictionPrompt}
   />
 </ModuleLayout>

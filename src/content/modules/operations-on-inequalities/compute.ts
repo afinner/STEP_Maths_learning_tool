@@ -1,12 +1,10 @@
-import { AMPLIFIERS, type Amplifier } from '../../../lib/amplifiers';
-import { canonicalSelection } from '../../../lib/selection';
 import { formatFixed } from '../../../lib/numbers';
 
 /**
  * Module 02 — Operations on inequalities.
  *
  * Every number the reader sees comes from here. Nothing in the prose or the
- * widget is a literal: the solution sets, the places the two statements
+ * panels is a literal: the solution sets, the places the two statements
  * disagree and the endpoints of every interval are found by evaluating the
  * inequalities themselves, so the page cannot drift away from the maths.
  *
@@ -15,8 +13,6 @@ import { formatFixed } from '../../../lib/numbers';
  * is sound exactly when D is empty, and when it is not empty its endpoints say
  * precisely what the step cost.
  */
-
-export type { Amplifier };
 
 /* ------------------------------------------------------------------------- *
  * Verdicts
@@ -33,40 +29,138 @@ export type Verdict = 'true' | 'false' | 'undefined';
 export const VERDICT_LABELS: Readonly<Record<Verdict, string>> = {
   true: 'holds',
   false: 'fails',
-  undefined: 'not defined here',
+  undefined: 'not defined',
 };
+
+export type Relation = '<' | '>';
 
 export interface Inequality {
   /** As the reader sees it. */
   text: string;
-  verdict(x: number): Verdict;
+  relation: Relation;
+  left(x: number): number;
+  right(x: number): number;
+  /** Where the statement makes sense at all. By default, wherever both sides are finite. */
+  defined?(x: number): boolean;
 }
 
-/** Guards a comparison so that a non-finite side reports as undefined. */
-function compare(left: number, right: number, holds: (a: number, b: number) => boolean): Verdict {
-  if (!Number.isFinite(left) || !Number.isFinite(right)) return 'undefined';
-  return holds(left, right) ? 'true' : 'false';
+function holds(relation: Relation, a: number, b: number): boolean {
+  return relation === '<' ? a < b : a > b;
+}
+
+export function verdict(inequality: Inequality, x: number): Verdict {
+  if (inequality.defined && !inequality.defined(x)) return 'undefined';
+  const a = inequality.left(x);
+  const b = inequality.right(x);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 'undefined';
+  return holds(inequality.relation, a, b) ? 'true' : 'false';
+}
+
+/* ------------------------------------------------------------------------- *
+ * The step as a function
+ * ------------------------------------------------------------------------- */
+
+/**
+ * "Do the same thing to both sides" is a map phi applied to each side. Whether
+ * the step is sound at a given x is whether phi is increasing between the two
+ * sides there — and for most steps phi itself depends on x.
+ */
+export interface Operation {
+  /** Describes phi at this x, as the reader sees it: 't ↦ (x − 2)·t = −2t'. */
+  describe(x: number): string;
+  apply(x: number, t: number): number;
+  /** The two sides the operation is applied to at this x, or null where one is not defined. */
+  sides(x: number): readonly [number, number] | null;
+  /** The two sides as the reader sees them. */
+  labels: readonly [string, string];
+}
+
+export type OrderState = 'lt' | 'gt' | 'eq' | 'undefined';
+
+export function orderOf(a: number, b: number): OrderState {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 'undefined';
+  if (a < b) return 'lt';
+  if (a > b) return 'gt';
+  return 'eq';
+}
+
+export const ORDER_SYMBOLS: Readonly<Record<OrderState, string>> = {
+  lt: '<',
+  gt: '>',
+  eq: '=',
+  undefined: '?',
+};
+
+export type Outcome = 'preserved' | 'reversed' | 'collapsed' | 'undefined';
+
+export const OUTCOME_LABELS: Readonly<Record<Outcome, string>> = {
+  preserved: 'order preserved',
+  reversed: 'order reversed',
+  collapsed: 'order destroyed',
+  undefined: 'not defined here',
+};
+
+export interface OperationReading {
+  sides: readonly [number, number] | null;
+  images: readonly [number, number] | null;
+  before: OrderState;
+  after: OrderState;
+  outcome: Outcome;
+}
+
+/** What the step does to the order of the two sides at this x. */
+export function operationAt(witness: Witness, x: number): OperationReading {
+  const sides = witness.operation.sides(x);
+  if (!sides) {
+    return { sides: null, images: null, before: 'undefined', after: 'undefined', outcome: 'undefined' };
+  }
+  const [a, b] = sides;
+  const images: readonly [number, number] = [
+    witness.operation.apply(x, a),
+    witness.operation.apply(x, b),
+  ];
+  const before = orderOf(a, b);
+  const after = orderOf(images[0], images[1]);
+  let outcome: Outcome;
+  if (before === 'undefined' || after === 'undefined') outcome = 'undefined';
+  else if (before === after) outcome = 'preserved';
+  else if (after === 'eq') outcome = 'collapsed';
+  else outcome = 'reversed';
+  return { sides, images, before, after, outcome };
 }
 
 /* ------------------------------------------------------------------------- *
  * The witnesses
  * ------------------------------------------------------------------------- */
 
+export type WitnessId =
+  | 'multiply-by-unknown-sign'
+  | 'square-both-sides'
+  | 'divide-by-variable'
+  | 'step-2001-i'
+  | 'step-2001-ii';
+
 export interface Witness {
-  id: string;
-  /** What the reader is asked to solve. */
+  id: WitnessId;
+  /** For the select: the statement and the move, in a few words. */
+  name: string;
   original: Inequality;
   /** The move, in the reader's words. */
   step: string;
   transformed: Inequality;
-  amplifier: Amplifier;
-  /** The window the number line draws. */
+  operation: Operation;
+  /** The window the charts draw. */
   domain: readonly [number, number];
+  /** The window the two-sides chart draws vertically; values outside break the line. */
+  yRange: readonly [number, number];
   /** Where x starts: somewhere the two agree, so the disagreement is found. */
   start: number;
-  /** Said only after the reader has seen the disagreement for themselves. */
+  /** Why the step goes wrong, said after the reader has seen it. */
   because: string;
 }
+
+/** A coefficient as the reader sees it, with a real minus sign rather than a hyphen. */
+const fmt = (x: number) => formatFixed(x, 1).replace(/^-/, '\u2212');
 
 /**
  * The primary witness. Multiplying by (x - 2) is the move everyone makes, and
@@ -75,20 +169,32 @@ export interface Witness {
  */
 const multiplyByUnknownSign: Witness = {
   id: 'multiply-by-unknown-sign',
+  name: '(x + 1)/(x − 2) < 3 — multiply by (x − 2)',
   original: {
     text: '(x + 1)/(x − 2) < 3',
-    verdict: (x) => compare((x + 1) / (x - 2), 3, (a, b) => a < b),
+    relation: '<',
+    left: (x) => (x + 1) / (x - 2),
+    right: () => 3,
+    defined: (x) => x !== 2,
   },
   step: 'multiply both sides by (x − 2)',
   transformed: {
     text: 'x + 1 < 3(x − 2)',
-    verdict: (x) => compare(x + 1, 3 * (x - 2), (a, b) => a < b),
+    relation: '<',
+    left: (x) => x + 1,
+    right: (x) => 3 * (x - 2),
   },
-  amplifier: 'sign-reversal',
+  operation: {
+    describe: (x) => `t ↦ (x − 2)·t = ${fmt(x - 2)}·t`,
+    apply: (x, t) => (x - 2) * t,
+    sides: (x) => (x === 2 ? null : [(x + 1) / (x - 2), 3]),
+    labels: ['(x + 1)/(x − 2)', '3'],
+  },
   domain: [-6, 8],
+  yRange: [-8, 8],
   start: 5,
   because:
-    'x − 2 is positive above 2 and negative below it. Multiplying by it keeps the inequality the same way round on one side and turns it round on the other, so one whole branch of the solution set is thrown away.',
+    'x − 2 is positive above 2 and negative below it. Multiplying by it keeps the order on one side and turns it round on the other, so one whole branch of the solution set is thrown away.',
 };
 
 /**
@@ -98,20 +204,33 @@ const multiplyByUnknownSign: Witness = {
  */
 const squareBothSides: Witness = {
   id: 'square-both-sides',
+  name: '√(x + 2) > x — square both sides',
   original: {
     text: '√(x + 2) > x',
-    verdict: (x) => (x < -2 ? 'undefined' : compare(Math.sqrt(x + 2), x, (a, b) => a > b)),
+    relation: '>',
+    left: (x) => Math.sqrt(x + 2),
+    right: (x) => x,
+    defined: (x) => x >= -2,
   },
   step: 'square both sides',
   transformed: {
     text: 'x + 2 > x²',
-    verdict: (x) => (x < -2 ? 'undefined' : compare(x + 2, x * x, (a, b) => a > b)),
+    relation: '>',
+    left: (x) => x + 2,
+    right: (x) => x * x,
+    defined: (x) => x >= -2,
   },
-  amplifier: 'sign-reversal',
+  operation: {
+    describe: () => 't ↦ t²',
+    apply: (_x, t) => t * t,
+    sides: (x) => (x < -2 ? null : [Math.sqrt(x + 2), x]),
+    labels: ['√(x + 2)', 'x'],
+  },
   domain: [-3, 3],
+  yRange: [-3, 4],
   start: 1,
   because:
-    'Squaring only preserves order between numbers that are both non-negative. Where x is negative the left-hand side is a square root and cannot be, so the comparison turns round and those solutions are lost.',
+    'Squaring only preserves order between numbers that are both non-negative. Where x is negative the comparison turns round and those solutions are lost.',
 };
 
 /**
@@ -120,26 +239,106 @@ const squareBothSides: Witness = {
  */
 const divideByVariable: Witness = {
   id: 'divide-by-variable',
+  name: 'x² > 3x — divide by x',
   original: {
     text: 'x² > 3x',
-    verdict: (x) => compare(x * x, 3 * x, (a, b) => a > b),
+    relation: '>',
+    left: (x) => x * x,
+    right: (x) => 3 * x,
   },
   step: 'divide both sides by x',
   transformed: {
     text: 'x > 3',
-    verdict: (x) => compare(x, 3, (a, b) => a > b),
+    relation: '>',
+    left: (x) => x,
+    right: () => 3,
   },
-  amplifier: 'domain-loss',
+  operation: {
+    describe: (x) => `t ↦ t/x = t/${fmt(x)}`,
+    apply: (x, t) => t / x,
+    sides: (x) => (x === 0 ? null : [x * x, 3 * x]),
+    labels: ['x²', '3x'],
+  },
   domain: [-4, 6],
+  yRange: [-8, 16],
   start: 4,
   because:
     'Dividing by x assumes x is positive and assumes it is not zero. Below zero the inequality reverses, and at zero the division is not a step at all.',
+};
+
+/** STEP I 2001, Q2(i), paraphrased: the multiplier is x itself. */
+const step2001i: Witness = {
+  id: 'step-2001-i',
+  name: 'STEP I 2001 Q2(i): 1 + 2x − x² > 2/x — multiply by x',
+  original: {
+    text: '1 + 2x − x² > 2/x',
+    relation: '>',
+    left: (x) => 1 + 2 * x - x * x,
+    right: (x) => 2 / x,
+    defined: (x) => x !== 0,
+  },
+  step: 'multiply both sides by x',
+  transformed: {
+    text: 'x + 2x² − x³ > 2',
+    relation: '>',
+    left: (x) => x + 2 * x * x - x * x * x,
+    right: () => 2,
+  },
+  operation: {
+    describe: (x) => `t ↦ x·t = ${fmt(x)}·t`,
+    apply: (x, t) => x * t,
+    sides: (x) => (x === 0 ? null : [1 + 2 * x - x * x, 2 / x]),
+    labels: ['1 + 2x − x²', '2/x'],
+  },
+  domain: [-3, 3],
+  yRange: [-8, 8],
+  start: 1.5,
+  because:
+    'Multiplying by x is one step for positive x and the opposite step for negative x. Applied everywhere at once it is right above zero and wrong at every negative x but one.',
+};
+
+/**
+ * STEP I 2001, Q2(ii), paraphrased. The first squaring is licensed — both sides
+ * are non-negative — and the second is not, because x + 1 can be negative.
+ */
+const STEP_II_DOMAIN = -10 / 3;
+const step2001ii: Witness = {
+  id: 'step-2001-ii',
+  name: 'STEP I 2001 Q2(ii): √(3x + 10) > 2 + √(x + 4) — square twice',
+  original: {
+    text: '√(3x + 10) > 2 + √(x + 4)',
+    relation: '>',
+    left: (x) => Math.sqrt(3 * x + 10),
+    right: (x) => 2 + Math.sqrt(x + 4),
+    defined: (x) => x >= STEP_II_DOMAIN,
+  },
+  step: 'square, tidy up, and square again',
+  transformed: {
+    text: 'x² − 2x − 15 > 0',
+    relation: '>',
+    left: (x) => x * x - 2 * x - 15,
+    right: () => 0,
+    defined: (x) => x >= STEP_II_DOMAIN,
+  },
+  operation: {
+    describe: () => 't ↦ t², the second squaring',
+    apply: (_x, t) => t * t,
+    sides: (x) => (x < STEP_II_DOMAIN ? null : [x + 1, 2 * Math.sqrt(x + 4)]),
+    labels: ['x + 1', '2√(x + 4)'],
+  },
+  domain: [-4, 7],
+  yRange: [0, 6],
+  start: 6,
+  because:
+    'The first squaring compares two non-negative quantities and is sound. The second compares x + 1 with 2√(x + 4), and below x = −1 the left side is negative: squaring there reverses the order and admits half a unit of x that never satisfied the original.',
 };
 
 export const WITNESSES: readonly Witness[] = [
   multiplyByUnknownSign,
   squareBothSides,
   divideByVariable,
+  step2001i,
+  step2001ii,
 ];
 
 export const PRIMARY_WITNESS = multiplyByUnknownSign;
@@ -161,8 +360,8 @@ export interface Reading {
 }
 
 export function readingAt(witness: Witness, x: number): Reading {
-  const original = witness.original.verdict(x);
-  const transformed = witness.transformed.verdict(x);
+  const original = verdict(witness.original, x);
+  const transformed = verdict(witness.transformed, x);
   return { x, original, transformed, agree: original === transformed };
 }
 
@@ -198,7 +397,8 @@ function boundary(predicate: (x: number) => boolean, inside: number, outside: nu
 /**
  * Every maximal run of the window on which the predicate holds, with refined
  * endpoints. Used for both the solution sets and the disagreement set, so a
- * reader never sees an interval that was typed rather than found.
+ * reader never sees an interval that was typed rather than found. Isolated
+ * points narrower than the scan are not seen; the prose says so where it matters.
  */
 export function intervalsWhere(
   predicate: (x: number) => boolean,
@@ -212,11 +412,11 @@ export function intervalsWhere(
 
   for (let x = start; x <= end + step / 2; x += step) {
     const here = Math.min(x, end);
-    const holds = predicate(here);
+    const holdsHere = predicate(here);
 
-    if (holds && runStart === null) {
+    if (holdsHere && runStart === null) {
       runStart = here === start ? start : boundary(predicate, here, previous);
-    } else if (!holds && runStart !== null) {
+    } else if (!holdsHere && runStart !== null) {
       intervals.push({
         from: runStart,
         to: boundary(predicate, previous, here),
@@ -236,7 +436,7 @@ export function intervalsWhere(
 
 /** Where the statement holds, inside the window. */
 export function solutionSet(inequality: Inequality, domain: readonly [number, number]): Interval[] {
-  return intervalsWhere((x) => inequality.verdict(x) === 'true', domain);
+  return intervalsWhere((x) => verdict(inequality, x) === 'true', domain);
 }
 
 /**
@@ -257,397 +457,25 @@ export function stepIsSound(witness: Witness): boolean {
  * both. Naming the direction separates a reader who has the mechanism from one
  * who has memorised "watch out for negatives".
  */
-export type ErrorDirection = 'loses solutions' | 'gains solutions' | 'both' | 'neither';
+export type ErrorDirection = 'loses solutions' | 'gains solutions' | 'loses and gains' | 'neither';
 
 export function errorDirection(witness: Witness): ErrorDirection {
-  const loses = intervalsWhere(
-    (x) => readingAt(witness, x).original === 'true' && readingAt(witness, x).transformed !== 'true',
-    witness.domain,
-  ).length > 0;
-  const gains = intervalsWhere(
-    (x) => readingAt(witness, x).transformed === 'true' && readingAt(witness, x).original !== 'true',
-    witness.domain,
-  ).length > 0;
+  const loses =
+    intervalsWhere(
+      (x) => readingAt(witness, x).original === 'true' && readingAt(witness, x).transformed !== 'true',
+      witness.domain,
+    ).length > 0;
+  const gains =
+    intervalsWhere(
+      (x) => readingAt(witness, x).transformed === 'true' && readingAt(witness, x).original !== 'true',
+      witness.domain,
+    ).length > 0;
 
-  if (loses && gains) return 'both';
+  if (loses && gains) return 'loses and gains';
   if (loses) return 'loses solutions';
   if (gains) return 'gains solutions';
   return 'neither';
 }
-
-/* ------------------------------------------------------------------------- *
- * The control
- * ------------------------------------------------------------------------- */
-
-/**
- * x moves in tenths, carried as an integer.
- *
- * The same detent as module 01's whole degrees, for the same reason: the
- * interesting points here are 2, 3.5, −2, −1 and 0, and a float slider that
- * lands at 1.9999999 would report a verdict for a place the reader is not
- * standing. Tenths put every critical point exactly on the grid.
- */
-export const X_STEP_TENTHS = 1;
-
-export function tenthsToX(tenths: number): number {
-  return tenths / 10;
-}
-
-export function xToTenths(x: number): number {
-  return Math.round(x * 10);
-}
-
-
-/* ------------------------------------------------------------------------- *
- * The bank
- * ------------------------------------------------------------------------- */
-
-/**
- * Two kinds of question, and the difference matters.
- *
- * In the first, order preservation is the trap: the step looks symmetric, the
- * arithmetic is right, and the solution set moves. In the second it is the tool
- * — the thing the question asks you to establish or to use on purpose. A reader
- * who has only met the mechanism as a hazard has half of it.
- *
- * Every entry is a citation and a paraphrase. No question text is reproduced;
- * see the standing rule in CONTRIBUTING.md.
- */
-export type BankKind = 'trap' | 'principle';
-
-interface BankEntryBase {
-  id: string;
-  /** Paper, year and question, as a citation. */
-  question: string;
-  /** The mathematical situation, in this module's words. */
-  situation: string;
-  /** The question's entry in the STEP database, which carries the paper. */
-  link: string;
-}
-
-export interface TrapEntry extends BankEntryBase {
-  kind: 'trap';
-  amplifiers: readonly Amplifier[];
-  /**
-   * One line per mechanism, because a question listed under two of them is
-   * there for two different reasons and repeating one paragraph in both places
-   * says neither.
-   */
-  why: Readonly<Partial<Record<Amplifier, string>>>;
-}
-
-export interface PrincipleEntry extends BankEntryBase {
-  kind: 'principle';
-  amplifiers: readonly [];
-  /** What the question asks you to establish or to lean on. */
-  why: string;
-}
-
-export type BankEntry = TrapEntry | PrincipleEntry;
-
-export const BANK: readonly BankEntry[] = [
-  {
-    id: 'step1-2001-q2',
-    link: 'https://step.maths.org/questions/01-s1-q2',
-    kind: 'trap',
-    question: 'STEP I 2001, Q2',
-    situation:
-      'Two inequalities to solve: a cubic against 2/x with x non-zero, and a comparison between two square roots.',
-    amplifiers: ['sign-reversal', 'domain-loss'],
-    why: {
-      'sign-reversal':
-        'This module twice over. The first part multiplies through by x, whose sign is unknown; the second squares twice, so order preservation has to be argued at each squaring rather than once.',
-      'domain-loss':
-        'Each root carries a domain the squared form forgets, and the first part excludes zero before any multiplying starts.',
-    },
-  },
-  {
-    id: 'step1-2003-q4',
-    link: 'https://step.maths.org/questions/03-s1-q4',
-    kind: 'trap',
-    question: 'STEP I 2003, Q4',
-    situation: 'Solve (sin θ + 1)/cos θ ≤ 1 over a full period, with cos θ non-zero.',
-    amplifiers: ['sign-reversal', 'domain-loss'],
-    why: {
-      'sign-reversal':
-        'The same shape as the witness, but the multiplier changes sign twice inside the range, so the step runs one way on some arcs and the other way on the rest.',
-      'domain-loss':
-        'The two angles where the cosine vanishes are outside the original statement and inside the cleared one, which is where the extra ranges come from.',
-    },
-  },
-  {
-    id: 'specimen-1986-s1-q9',
-    link: 'https://step.maths.org/questions/spec-s1-q9',
-    kind: 'trap',
-    question: '1986 Specimen S1, Q9(i)',
-    situation: 'Solve |x + (x − 1)/(x + 1)| < 2.',
-    amplifiers: ['sign-reversal', 'domain-loss'],
-    why: {
-      'sign-reversal':
-        'A modulus stacked on a rational expression: the modulus splits the problem into cases with opposite order behaviour, and the expression inside changes sign as well.',
-      'domain-loss':
-        'One value of x is outside the statement altogether, and it sits in the middle of the region the cases are being argued over.',
-    },
-  },
-  {
-    id: 'step1-1995-q1',
-    link: 'https://step.maths.org/questions/95-s1-q1',
-    kind: 'trap',
-    question: 'STEP I 1995, Q1(i) and (iii)',
-    situation: 'The same cubic inequality posed first in one variable and then in two.',
-    amplifiers: ['sign-reversal'],
-    why: {
-      'sign-reversal':
-        'The tempting reduction divides through by an odd power of the second variable, which changes sign with it. The same lesson as the witness, one dimension up, where it is much easier to miss.',
-    },
-  },
-  {
-    id: 'step2-2004-q2',
-    link: 'https://step.maths.org/questions/04-s2-q2',
-    kind: 'trap',
-    question: 'STEP II 2004, Q2',
-    situation:
-      'Solve x² − α|x| + 2 < 0, then give the total length of the solution intervals.',
-    amplifiers: ['sign-reversal'],
-    why: {
-      'sign-reversal':
-        'The modulus splits the problem at zero into branches with opposite order behaviour. Self-marking, which is rare and worth using: drop a branch and the total length comes out visibly wrong, so the arithmetic reports the omission back to you.',
-    },
-  },
-  {
-    id: 'step2-1997-q8',
-    link: 'https://step.maths.org/questions/97-s2-q8',
-    kind: 'principle',
-    question: 'STEP II 1997, Q8',
-    situation:
-      'Explain why one function being at least another on an interval means its integral is at least the other\u2019s, then use it.',
-    amplifiers: [],
-    why: 'This module\u2019s boundary, set as an examination instruction: integration is order-preserving, and the question asks you to say why before leaning on it.',
-  },
-  {
-    id: 'step1-2017-q2',
-    link: 'https://step.maths.org/questions/17-s1-q2',
-    kind: 'principle',
-    question: 'STEP I 2017, Q2',
-    situation: 'An inequality integrated three times in succession.',
-    amplifiers: [],
-    why: 'Order survives each integration, but the direction has to be tracked as the interval flips. The rule used correctly, repeatedly, is the best practice there is for noticing when it is not.',
-  },
-  {
-    id: 'step2-2017-q6',
-    link: 'https://step.maths.org/questions/17-s2-q6',
-    kind: 'principle',
-    question: 'STEP II 2017, Q6(ii)',
-    situation: 'A step that squares an inequality, licensed by both sides being non-negative.',
-    amplifiers: [],
-    why: 'The exact condition the squaring witness violates, stated as a permission rather than a warning.',
-  },
-  {
-    id: 'step2-2016-q4',
-    link: 'https://step.maths.org/questions/16-s2-q4',
-    kind: 'principle',
-    question: 'STEP II 2016, Q4(i)',
-    situation: 'A step from A² ≥ B² to |A| ≥ |B|.',
-    amplifiers: [],
-    why: 'Squaring read backwards. It recovers the moduli and nothing more, which is precisely why the forward step loses the sign information it does.',
-  },
-  {
-    id: 'step1-2018-q2',
-    link: 'https://step.maths.org/questions/18-s1-q2',
-    kind: 'principle',
-    question: 'STEP I 2018, Q2(i)',
-    situation: 'A step taking reciprocals of both sides.',
-    amplifiers: [],
-    why: 'Reciprocals reverse order between quantities of the same sign, and do something else entirely across zero. A third operation with the same character as the two the module works through.',
-  },
-  {
-    id: 'step1-2011-q8',
-    link: 'https://step.maths.org/questions/11-s1-q8',
-    kind: 'principle',
-    question: 'STEP I 2011, Q8(a)',
-    situation:
-      'Show that one quantity is less than another exactly when a quadratic in n is positive.',
-    amplifiers: [],
-    why: 'The closest thing in the archive to the disagreement set: the question asks for the precise range on which the two statements agree, which is the same object this module measures.',
-  },
-];
-
-export interface BankGroup {
-  amplifier: Amplifier;
-  entries: readonly TrapEntry[];
-}
-
-/** Traps grouped by mechanism. A question driven by two appears under both. */
-export function bankByAmplifier(bank: readonly BankEntry[] = BANK): BankGroup[] {
-  return AMPLIFIERS.map((amplifier) => ({
-    amplifier,
-    entries: bank.filter(
-      (entry): entry is TrapEntry =>
-        entry.kind === 'trap' && entry.amplifiers.includes(amplifier),
-    ),
-  })).filter((group) => group.entries.length > 0);
-}
-
-/** The questions where order preservation is the tool rather than the hazard. */
-export function principleQuestions(bank: readonly BankEntry[] = BANK): PrincipleEntry[] {
-  return bank.filter((entry): entry is PrincipleEntry => entry.kind === 'principle');
-}
-
-/**
- * What is behind a bank citation.
- *
- * Paper, year and question number, and nothing else: these are references to
- * work from, and the module has no verified link to give for them. Adding links
- * later means saying what is behind each one — an official paper and a worked
- * solution are different objects to hand somebody who is about to attempt the
- * question.
- */
-export const BANK_CITATION_NOTE =
-  'Each link is the question\u2019s entry in the STEP database, which carries the paper itself and onward links to worked solutions. Follow one expecting the question, not the answer.';
-
-/**
- * Further questions in the same family, listed and nothing more.
- *
- * The module has not worked these through, and the database entries carry topic
- * keywords rather than the questions themselves, so there is no honest note to
- * write about what each one does with order preservation. They are here because
- * a reader who has run out of the annotated ones should know they exist — with
- * the topics the database itself gives, and no claim beyond that.
- */
-export interface FurtherQuestion {
-  id: string;
-  question: string;
-  /** The topics the STEP question database files it under. */
-  topics: string;
-  link: string;
-}
-
-export const FURTHER_QUESTIONS: readonly FurtherQuestion[] = [
-  {
-    id: '91-s1-q9',
-    question: 'STEP I 1991, Q9',
-    topics: 'Sums, inequalities, approximation',
-    link: 'https://step.maths.org/questions/91-s1-q9',
-  },
-  {
-    id: '02-s3-q4',
-    question: 'STEP III 2002, Q4',
-    topics: 'Number theory, differences of cubes, sums of squares',
-    link: 'https://step.maths.org/questions/02-s3-q4',
-  },
-  {
-    id: '93-s2-q8',
-    question: 'STEP II 1993, Q8',
-    topics: 'The arithmetic-geometric mean inequality, induction',
-    link: 'https://step.maths.org/questions/93-s2-q8',
-  },
-  {
-    id: '15-s2-q1',
-    question: 'STEP II 2015, Q1',
-    topics: 'Differentiation, infinite series, logarithms',
-    link: 'https://step.maths.org/questions/15-s2-q1',
-  },
-  {
-    id: '12-s1-q3',
-    question: 'STEP I 2012, Q3',
-    topics: 'Integration, curve sketching, tangents, exponentials',
-    link: 'https://step.maths.org/questions/12-s1-q3',
-  },
-  {
-    id: '90-s1-q9',
-    question: 'STEP I 1990, Q9',
-    topics: 'Coordinate geometry, intersections, areas',
-    link: 'https://step.maths.org/questions/90-s1-q9',
-  },
-];
-
-/* ------------------------------------------------------------------------- *
- * Measurement
- * ------------------------------------------------------------------------- */
-
-/**
- * Where a multiplier changes sign, found by bisection on the function itself.
- *
- * This is the item that isolates the mechanism from the solving: a reader who
- * has the idea can name the place a step turns round without touching the
- * inequality it is applied to.
- */
-export interface MultiplierItem {
-  id: string;
-  /** The factor about to be multiplied through, as the reader sees it. */
-  text: string;
-  factor(x: number): number;
-  domain: readonly [number, number];
-}
-
-export const MULTIPLIER_ITEMS: readonly MultiplierItem[] = [
-  {
-    id: 'five-minus-x',
-    text: '5 − x',
-    factor: (x) => 5 - x,
-    domain: [-10, 10],
-  },
-  {
-    id: 'two-x-plus-six',
-    text: '2x + 6',
-    factor: (x) => 2 * x + 6,
-    domain: [-10, 10],
-  },
-];
-
-/** Every place the factor changes sign inside the window. */
-export function signChanges(item: MultiplierItem): number[] {
-  const positive = intervalsWhere((x) => item.factor(x) > 0, item.domain);
-  const points: number[] = [];
-  for (const interval of positive) {
-    if (!interval.fromClipped) points.push(interval.from);
-    if (!interval.toClipped) points.push(interval.to);
-  }
-  return points.sort((a, b) => a - b);
-}
-
-/** Marked against the computed sign change, to a tenth. */
-export function marksSignChange(item: MultiplierItem, response: string): boolean {
-  const answer = Number(response.trim());
-  if (!Number.isFinite(answer)) return false;
-  return signChanges(item).some((point) => Math.abs(point - answer) < 0.05);
-}
-
-/**
- * Total length of the solution set.
- *
- * The property worth stealing from 2004 S2 Q2: ask for the total length and the
- * arithmetic marks itself. A reader who drops a branch does not get a wrong
- * shape that has to be checked against a graph — they get a number that is
- * visibly, quantifiably short, and the size of the shortfall is the size of what
- * they lost.
- *
- * The statement here is the module's own, not the examination's.
- */
-export interface LengthItem {
-  id: string;
-  text: string;
-  /** The step that loses a branch, and what it leaves. */
-  naiveText: string;
-  original: Inequality;
-  naive: Inequality;
-  domain: readonly [number, number];
-}
-
-export const LENGTH_ITEM: LengthItem = {
-  id: 'total-length',
-  text: 'x² − 5|x| + 6 < 0',
-  naiveText: 'treating |x| as x, giving x² − 5x + 6 < 0',
-  original: {
-    text: 'x² − 5|x| + 6 < 0',
-    verdict: (x) => compare(x * x - 5 * Math.abs(x) + 6, 0, (a, b) => a < b),
-  },
-  naive: {
-    text: 'x² − 5x + 6 < 0',
-    verdict: (x) => compare(x * x - 5 * x + 6, 0, (a, b) => a < b),
-  },
-  domain: [-8, 8],
-};
 
 /**
  * The total length of a set of intervals, or null when one of them runs off the
@@ -659,102 +487,57 @@ export function totalLength(intervals: readonly Interval[]): number | null {
   return intervals.reduce((sum, interval) => sum + (interval.to - interval.from), 0);
 }
 
-export function solutionLength(
-  inequality: Inequality,
+/* ------------------------------------------------------------------------- *
+ * Curves for the charts
+ * ------------------------------------------------------------------------- */
+
+export type CurvePoint = readonly [x: number, y: number];
+
+/** Samples of a function across the window, with NaN wherever it would leave the frame. */
+export function curveOf(
+  fn: (x: number) => number,
   domain: readonly [number, number],
-): number | null {
-  return totalLength(solutionSet(inequality, domain));
+  yRange: readonly [number, number],
+  samples = 400,
+): CurvePoint[] {
+  const [start, end] = domain;
+  const points: CurvePoint[] = [];
+  for (let i = 0; i <= samples; i += 1) {
+    const x = start + ((end - start) * i) / samples;
+    const y = fn(x);
+    const visible = Number.isFinite(y) && y >= yRange[0] && y <= yRange[1];
+    points.push([x, visible ? y : NaN]);
+  }
+  return points;
 }
 
-/** Marked against the computed total, to a tenth. */
-export function marksTotalLength(item: LengthItem, response: string): boolean {
-  const answer = Number(response.trim());
-  const truth = solutionLength(item.original, item.domain);
-  if (!Number.isFinite(answer) || truth === null) return false;
-  return Math.abs(truth - answer) < 0.05;
+/** The window the operation graph draws in t: both sides and zero, with room around them. */
+export function operationRange(witness: Witness, x: number): readonly [number, number] {
+  const sides = witness.operation.sides(x);
+  if (!sides) return [-3, 3];
+  const lo = Math.min(sides[0], sides[1], 0);
+  const hi = Math.max(sides[0], sides[1], 0);
+  const pad = Math.max(1, 0.35 * (hi - lo));
+  return [lo - pad, hi + pad];
 }
 
-export interface StepCase {
-  id: string;
-  /** The statement and the move, as the reader sees them. */
-  text: string;
-  stepText: string;
-  original: Inequality;
-  transformed: Inequality;
-  domain: readonly [number, number];
-  because: string;
-}
+/* ------------------------------------------------------------------------- *
+ * The control
+ * ------------------------------------------------------------------------- */
 
 /**
- * Cross-context transfer: four steps of the same shape in four different
- * settings, where only whether the operation preserves order separates them.
- * None of them is the witness the module worked through, so recall does not
- * help — and the key is computed from the statements rather than declared.
+ * x moves in tenths, carried as an integer, so every critical point — 2, 3.5,
+ * −2, −1, 0, −3 — is exactly on the grid and a verdict is never reported for a
+ * place the reader is not standing.
  */
-export const STEP_CASES: readonly StepCase[] = [
-  {
-    id: 'a',
-    text: '2x < 6',
-    stepText: 'divide both sides by 2',
-    original: { text: '2x < 6', verdict: (x) => compare(2 * x, 6, (a, b) => a < b) },
-    transformed: { text: 'x < 3', verdict: (x) => compare(x, 3, (a, b) => a < b) },
-    domain: [-8, 8],
-    because: 'Dividing by a positive constant is order-preserving everywhere.',
-  },
-  {
-    id: 'b',
-    text: '−2x < 6',
-    stepText: 'divide both sides by −2',
-    original: { text: '−2x < 6', verdict: (x) => compare(-2 * x, 6, (a, b) => a < b) },
-    transformed: { text: 'x < −3', verdict: (x) => compare(x, -3, (a, b) => a < b) },
-    domain: [-8, 8],
-    because:
-      'Dividing by a negative constant reverses the order, so the inequality has to turn round. It did not, and the answer is the complement of the truth.',
-  },
-  {
-    id: 'c',
-    text: 'x < 4',
-    stepText: 'add 3 to both sides',
-    original: { text: 'x < 4', verdict: (x) => compare(x, 4, (a, b) => a < b) },
-    transformed: { text: 'x + 3 < 7', verdict: (x) => compare(x + 3, 7, (a, b) => a < b) },
-    domain: [-8, 8],
-    because: 'Adding a constant shifts both sides equally and cannot change the order.',
-  },
-  {
-    id: 'd',
-    text: 'x < 4',
-    stepText: 'square both sides',
-    original: { text: 'x < 4', verdict: (x) => compare(x, 4, (a, b) => a < b) },
-    transformed: { text: 'x² < 16', verdict: (x) => compare(x * x, 16, (a, b) => a < b) },
-    domain: [-8, 8],
-    because:
-      'Squaring preserves order only between non-negative numbers. Every x below −4 satisfies the original and fails the square.',
-  },
-];
+export const X_STEP_TENTHS = 1;
 
-export function casePreservesSolutions(item: StepCase): boolean {
-  return (
-    intervalsWhere(
-      (x) => item.original.verdict(x) !== item.transformed.verdict(x),
-      item.domain,
-    ).length === 0
-  );
+export function tenthsToX(tenths: number): number {
+  return tenths / 10;
 }
 
-/** The key for the transfer item, in the exact form the widget submits. */
-export function stepCaseAnswerKey(): string {
-  return canonicalSelection(
-    STEP_CASES.filter((item) => casePreservesSolutions(item)).map((item) => item.id),
-  );
-}
-
-export function marksStepCases(response: string): boolean {
-  return response === stepCaseAnswerKey();
-}
-
-/** The direction item's key, read off the witness rather than declared. */
-export function marksErrorDirection(witnessId: string, response: string): boolean {
-  return response === errorDirection(witnessById(witnessId));
+export function xToTenths(x: number): number {
+  return Math.round(x * 10);
 }
 
 /* ------------------------------------------------------------------------- *
@@ -767,12 +550,17 @@ export { formatFixed };
 
 /** An interval as a reader would write it, with the window's edges marked. */
 export function formatInterval(interval: Interval, decimals: number = X_DECIMALS): string {
-  const from = interval.fromClipped ? '…' : formatFixed(interval.from, decimals);
-  const to = interval.toClipped ? '…' : formatFixed(interval.to, decimals);
+  const from = interval.fromClipped ? '−∞' : formatFixed(interval.from, decimals);
+  const to = interval.toClipped ? '∞' : formatFixed(interval.to, decimals);
   return `${from} to ${to}`;
 }
 
 export function formatIntervals(intervals: readonly Interval[], decimals: number = X_DECIMALS): string {
-  if (intervals.length === 0) return 'nowhere';
+  if (intervals.length === 0) return 'empty';
   return intervals.map((interval) => formatInterval(interval, decimals)).join(', and ');
+}
+
+export function formatLength(intervals: readonly Interval[]): string {
+  const length = totalLength(intervals);
+  return length === null ? 'unbounded' : formatFixed(length, 2);
 }
