@@ -41,7 +41,9 @@ npm run build    # production build — validates every module
 | `npm run check` | Astro/TypeScript diagnostics. |
 
 **Adding a module: see [CONTRIBUTING.md](CONTRIBUTING.md).** That file is the
-spec — one directory, eight files, no other changes.
+spec — one directory, eight files, no other changes. Candidate modules, with
+the STEP questions they would be built on, are collected in
+[docs/module-ideas.md](docs/module-ideas.md).
 
 ## How it fits together
 

@@ -95,6 +95,9 @@ describe('explore shell', () => {
     expect(html).toContain('<svg');
     expect(html).toContain('type="range"');
     expect(html).toContain('interactive');
+    // The question being measured is stated at the top of every panel.
+    expect((html.match(/class="panel-question"/g) ?? []).length).toBe(1);
+    expect(html).toContain('Does the mean of the first n terms tend to zero?');
   });
 
   it('renders one chip per hypothesis, none of them pressed, and nothing about committing', () => {
@@ -127,6 +130,7 @@ describe('Module 01', () => {
   it('renders three panels, each with its own chip, and no NaN anywhere', () => {
     expect(Object.keys(moduleOnePresets).sort()).toEqual(hypotheses.map((h) => h.id).sort());
     expect((html.match(/class="panel"/g) ?? []).length).toBe(3);
+    expect((html.match(/class="panel-question"/g) ?? []).length).toBe(3);
     expect((html.match(/class="chip"/g) ?? []).length).toBe(2);
     expect(html).toContain('Push n to a million');
     expect(html).toContain('Stand at θ = 0');
@@ -160,6 +164,8 @@ describe('Module 02', () => {
   it('renders both panels with the five steps on offer', () => {
     expect(Object.keys(inequalityPresets).sort()).toEqual(hypotheses.map((h) => h.id).sort());
     expect((html.match(/class="panel"/g) ?? []).length).toBe(2);
+    expect((html.match(/class="panel-question"/g) ?? []).length).toBe(2);
+    expect(html).toContain('What does it cost to multiply both sides by (x − 2)?');
     expect((html.match(/<option/g) ?? []).length).toBe(5);
     expect(html).toContain('STEP I 2001 Q2(i)');
     expect(html).toContain('D, the disagreement set');
@@ -172,8 +178,8 @@ describe('Module 02', () => {
   });
 });
 
-describe('Module 03 (draft)', () => {
-  it('still renders through the shared shell', () => {
+describe('Module 03', () => {
+  it('renders the figure, the sweep and the featured question as three panels', () => {
     const html = renderToStaticMarkup(
       <FigureWidget
         hypotheses={[
@@ -183,8 +189,12 @@ describe('Module 03 (draft)', () => {
         ]}
       />,
     );
-    expect(html).toContain('class="panel"');
+    expect((html.match(/class="panel"/g) ?? []).length).toBe(3);
+    expect((html.match(/class="panel-question"/g) ?? []).length).toBe(3);
     expect((html.match(/class="chip"/g) ?? []).length).toBe(3);
     expect(html).toContain('the false step');
+    expect(html).toContain('as it really is');
+    expect(html).toContain('x = 0.414');
+    expect(html).not.toContain('NaN');
   });
 });

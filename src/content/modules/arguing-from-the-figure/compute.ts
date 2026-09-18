@@ -266,6 +266,9 @@ export function drawnAngleAtM(a: Point): number {
  * The argument
  * -------------------------------------------------------------------------- */
 
+/** What the steps need to know about a figure: true or drawn, the shape is the same. */
+export type FigureLike = Pick<Figure, 'a' | 'p' | 'm' | 'f' | 'g' | 'sides'>;
+
 export interface ArgumentStep {
   readonly n: number;
   /** What the step claims, in this module's words. */
@@ -278,7 +281,7 @@ export interface ArgumentStep {
    * construction determines the points it names, which is why a degenerate
    * figure fails at step 1 rather than anywhere later.
    */
-  readonly holdsIn: (figure: Figure) => boolean;
+  readonly holdsIn: (figure: FigureLike) => boolean;
 }
 
 export const STEPS: readonly ArgumentStep[] = [
@@ -344,7 +347,25 @@ export const CONCLUSION = 'AB = AC, so the triangle is isosceles.';
 export function failingSteps(a: Point): number[] {
   const figure = trueFigure(a);
   if (!isFigure(figure)) return [1];
+  return failingStepsIn(figure);
+}
+
+/** The steps that are false of a given figure, whichever figure it is. */
+export function failingStepsIn(figure: FigureLike): number[] {
   return STEPS.filter((step) => !step.holdsIn(figure)).map((step) => step.n);
+}
+
+/**
+ * Which steps are false of the figure as it gets drawn.
+ *
+ * With P inside, both feet are inside and the two additions are sound. What
+ * fails instead is what the drawing paid with: its P is on the bisector of A
+ * but not on the perpendicular bisector of BC, so PB = PC is false and so is
+ * the congruence built on it. On the line of symmetry the incentre is on both
+ * lines, every step holds, and the conclusion AB = AC is simply true.
+ */
+export function drawnFailingSteps(a: Point): number[] {
+  return failingStepsIn(drawnFigure(a));
 }
 
 /** The single false step, or null if a configuration ever has more or fewer. */
@@ -404,3 +425,231 @@ export function overshoot(a: Point): number {
   const measured = sides(a);
   return Math.abs(measured.ca - measured.ab) / 2;
 }
+
+/* -------------------------------------------------------------------------- *
+ * The circle P lies on
+ * -------------------------------------------------------------------------- */
+
+export interface Circle {
+  readonly centre: Point;
+  readonly radius: number;
+}
+
+/** The circle through A, B and C. P is the midpoint of the arc BC not containing A. */
+export function circumcircle(a: Point): Circle | null {
+  const d = 2 * (a.x * (B.y - C.y) + B.x * (C.y - a.y) + C.x * (a.y - B.y));
+  if (Math.abs(d) < PARALLEL_TOLERANCE) return null;
+  const square = (p: Point) => p.x * p.x + p.y * p.y;
+  const centre: Point = {
+    x: (square(a) * (B.y - C.y) + square(B) * (C.y - a.y) + square(C) * (a.y - B.y)) / d,
+    y: (square(a) * (C.x - B.x) + square(B) * (a.x - C.x) + square(C) * (B.x - a.x)) / d,
+  };
+  return { centre, radius: distance(centre, a) };
+}
+
+/* -------------------------------------------------------------------------- *
+ * Sweeping A across the figure
+ * -------------------------------------------------------------------------- */
+
+export interface SigmaSample {
+  readonly x: number;
+  /** null where the construction determines no P. */
+  readonly sigmaF: number | null;
+  readonly sigmaG: number | null;
+}
+
+/** sigma at both feet as A slides horizontally at a fixed height. */
+export function sigmaSweep(yTenths: number): SigmaSample[] {
+  const samples: SigmaSample[] = [];
+  for (let xTenths = A_X_TENTHS.min; xTenths <= A_X_TENTHS.max; xTenths += A_X_TENTHS.step) {
+    const a = apex({ xTenths, yTenths });
+    const figure = trueFigure(a);
+    samples.push({
+      x: a.x,
+      sigmaF: isFigure(figure) ? figure.f.sigma : null,
+      sigmaG: isFigure(figure) ? figure.g.sigma : null,
+    });
+  }
+  return samples;
+}
+
+/* -------------------------------------------------------------------------- *
+ * The STEP question: AP = PQ = QB = x in a triangle of base 1
+ * -------------------------------------------------------------------------- */
+
+/**
+ * The featured question, STEP II 2014 Q1 in this module's framing: the base AB
+ * has length 1, the angles at A and B are alpha <= beta, and P on AC and Q on
+ * BC satisfy AP = PQ = QB = x. Squaring the vector PQ gives
+ *
+ *   (1 + 2cos(alpha + beta)) x^2 - 2(cos alpha + cos beta) x + 1 = 0,     (*)
+ *
+ * and nothing in that derivation says where P and Q are. Every root of (*)
+ * is a genuine configuration; the figure shows one of them.
+ */
+/**
+ * The ranges the sliders offer. alpha is capped at half the maximum sum, so
+ * beta = alpha is always available and alpha <= beta can always be kept.
+ */
+export const STEP_ANGLES = { min: 5, max: 100, alphaMax: 85, maxSum: 170 } as const;
+
+export interface StepPlacement {
+  readonly x: number;
+  readonly p: Point;
+  readonly q: Point;
+  /** Position of P along AC, as A + t(C - A). */
+  readonly tP: number;
+  readonly tQ: number;
+  readonly sigmaP: number;
+  readonly sigmaQ: number;
+  /** The angle PQ makes with the base, in degrees. */
+  readonly thetaDegrees: number;
+  /** Both feet strictly inside their sides: the configuration the figure shows. */
+  readonly asDrawn: boolean;
+}
+
+export interface StepTriangle {
+  readonly a: Point;
+  readonly b: Point;
+  readonly c: Point;
+  readonly ac: number;
+  readonly bc: number;
+  /** The coefficients of (*): quadratic, linear, constant. */
+  readonly coefficients: readonly [number, number, number];
+  readonly linear: boolean;
+  /** Every real root of (*), ascending, including any that is not a length. */
+  readonly roots: readonly number[];
+  /**
+   * One placement per positive root. x is a length — AP = PQ = QB = x — so a
+   * negative root of (*) is algebra, not geometry: it would put P and Q on the
+   * rays opposite the sides, which is not what the question describes.
+   */
+  readonly placements: readonly StepPlacement[];
+  /** How many real roots of (*) are not lengths. */
+  readonly rootsNotLengths: number;
+}
+
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
+/**
+ * Keep alpha <= beta and alpha + beta <= maxSum, whichever slider moved.
+ *
+ * The moved angle is taken as given (within its range) and the other one is
+ * adjusted; because alpha never exceeds half the maximum sum, both constraints
+ * can always be satisfied at once, and the result is checked rather than
+ * assumed.
+ */
+export function clampStepAngles(alpha: number, beta: number, moved: 'alpha' | 'beta'): [number, number] {
+  let a = Math.max(STEP_ANGLES.min, Math.min(STEP_ANGLES.alphaMax, alpha));
+  let b = Math.max(STEP_ANGLES.min, Math.min(STEP_ANGLES.max, beta));
+  if (moved === 'alpha') {
+    b = Math.max(a, Math.min(b, STEP_ANGLES.maxSum - a));
+  } else {
+    a = Math.min(b, a, STEP_ANGLES.maxSum - b);
+    a = Math.max(STEP_ANGLES.min, a);
+    // If beta is so small that even alpha = min is above it, raise beta.
+    if (b < a) b = a;
+  }
+  if (a > b || a + b > STEP_ANGLES.maxSum) {
+    throw new Error(`clampStepAngles produced an invalid pair: ${a}, ${b}`);
+  }
+  return [a, b];
+}
+
+export function stepTriangle(alphaDegrees: number, betaDegrees: number): StepTriangle {
+  const alpha = toRadians(alphaDegrees);
+  const beta = toRadians(betaDegrees);
+  const a: Point = { x: 0, y: 0 };
+  const b: Point = { x: 1, y: 0 };
+  // Sine rule with AB = 1.
+  const ac = Math.sin(beta) / Math.sin(alpha + beta);
+  const bc = Math.sin(alpha) / Math.sin(alpha + beta);
+  const c: Point = { x: ac * Math.cos(alpha), y: ac * Math.sin(alpha) };
+
+  const quadratic = 1 + 2 * Math.cos(alpha + beta);
+  const linearCoefficient = -2 * (Math.cos(alpha) + Math.cos(beta));
+  const constant = 1;
+  const linear = Math.abs(quadratic) < 1e-9;
+
+  let roots: number[];
+  if (linear) {
+    roots = [-constant / linearCoefficient];
+  } else {
+    const discriminant = linearCoefficient * linearCoefficient - 4 * quadratic * constant;
+    if (discriminant < 0) roots = [];
+    else {
+      const s = Math.sqrt(discriminant);
+      roots = [(-linearCoefficient - s) / (2 * quadratic), (-linearCoefficient + s) / (2 * quadratic)];
+    }
+  }
+  roots.sort((u, v) => u - v);
+
+  const lengths = roots.filter((x) => x > 0);
+  const placements = lengths.map((x): StepPlacement => {
+    const p: Point = { x: x * Math.cos(alpha), y: x * Math.sin(alpha) };
+    const q: Point = { x: 1 - x * Math.cos(beta), y: x * Math.sin(beta) };
+    const tP = x / ac;
+    const tQ = x / bc;
+    const sigmaP = Math.min(tP, 1 - tP);
+    const sigmaQ = Math.min(tQ, 1 - tQ);
+    const thetaDegrees = (Math.atan2(q.y - p.y, q.x - p.x) * 180) / Math.PI;
+    return { x, p, q, tP, tQ, sigmaP, sigmaQ, thetaDegrees, asDrawn: sigmaP > 0 && sigmaQ > 0 };
+  });
+
+  return {
+    a,
+    b,
+    c,
+    ac,
+    bc,
+    coefficients: [quadratic, linearCoefficient, constant],
+    linear,
+    roots,
+    placements,
+    rootsNotLengths: roots.length - lengths.length,
+  };
+}
+
+/** The left-hand side of (*) at x: zero at every root, by construction. */
+export function stepResidual(triangle: StepTriangle, x: number): number {
+  const [q2, q1, q0] = triangle.coefficients;
+  return q2 * x * x + q1 * x + q0;
+}
+
+/** How the reader describes where a point landed, from its sigma. */
+export function describeSigma(sigma: number): string {
+  if (nearlyEqual(sigma, 0)) return 'exactly at a vertex';
+  return sigma > 0 ? 'strictly inside the side' : 'past the vertex, on the side produced';
+}
+
+/* -------------------------------------------------------------------------- *
+ * Panel state
+ * -------------------------------------------------------------------------- */
+
+export type View = 'true' | 'drawn';
+
+export interface PanelParams extends Params {
+  readonly view: View;
+  readonly alphaDegrees: number;
+  readonly betaDegrees: number;
+  /** Which root of (*) the third panel draws. */
+  readonly root: number;
+}
+
+export const INITIAL_PANEL_PARAMS: PanelParams = {
+  ...INITIAL_PARAMS,
+  view: 'true',
+  alphaDegrees: 45,
+  betaDegrees: 45,
+  root: 0,
+};
+
+/** The ledger configurations, carried into the full panel state. */
+export const PANEL_CONFIGURATIONS: Readonly<Record<string, PanelParams>> = Object.fromEntries(
+  Object.entries(CONFIGURATIONS).map(([id, params]) => [
+    id,
+    { ...INITIAL_PANEL_PARAMS, ...params, view: 'true' as View },
+  ]),
+);
