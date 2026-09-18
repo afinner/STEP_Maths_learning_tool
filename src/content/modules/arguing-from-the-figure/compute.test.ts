@@ -263,10 +263,27 @@ import {
   circumcircle,
   clampStepAngles,
   describeSigma,
+  drawnFailingSteps,
   sigmaSweep,
   stepResidual,
   stepTriangle,
 } from './compute';
+
+describe('the figure as it gets drawn, judged by the argument', () => {
+  it('fails the perpendicular-bisector steps and nothing else, off the line of symmetry', () => {
+    for (const a of reachable()) {
+      const symmetric = Math.abs(a.x - (B.x + C.x) / 2) < 1e-12;
+      if (symmetric) continue;
+      expect(drawnFailingSteps(a)).toEqual([4, 5]);
+    }
+  });
+
+  it('has every step true on the line of symmetry, where AB = AC really holds', () => {
+    for (let y = A_Y_TENTHS.min; y <= A_Y_TENTHS.max; y += 10) {
+      expect(drawnFailingSteps(apex({ xTenths: SYMMETRIC_X_TENTHS, yTenths: y }))).toEqual([]);
+    }
+  });
+});
 
 describe('the circle P lies on', () => {
   it('passes through A, B, C and P, wherever A is', () => {
@@ -327,14 +344,32 @@ describe('the featured question', () => {
     expect(only.asDrawn).toBe(false);
   });
 
-  it('places P and Q so that AP = PQ = QB = x for every root, whatever the angles', () => {
-    for (let alpha = STEP_ANGLES.min; alpha <= STEP_ANGLES.max; alpha += 10) {
+  it('keeps a negative root as algebra and never draws it', () => {
+    // alpha + beta > 120 degrees makes the leading coefficient negative, so the
+    // two roots have opposite signs. Only the positive one is a length.
+    const t = stepTriangle(60, 61);
+    expect(t.roots).toHaveLength(2);
+    expect(t.roots[0]).toBeLessThan(0);
+    expect(t.roots[1]).toBeGreaterThan(0);
+    expect(t.rootsNotLengths).toBe(1);
+    expect(t.placements).toHaveLength(1);
+    expect(t.placements[0]?.x).toBe(t.roots[1]);
+    for (const each of t.placements) {
+      expect(each.tP).toBeGreaterThan(0);
+      expect(each.tQ).toBeGreaterThan(0);
+    }
+  });
+
+  it('places P and Q so that AP = PQ = QB = x for every positive root, whatever the angles', () => {
+    for (let alpha = STEP_ANGLES.min; alpha <= STEP_ANGLES.alphaMax; alpha += 10) {
       for (let beta = alpha; alpha + beta <= STEP_ANGLES.maxSum && beta <= STEP_ANGLES.max; beta += 10) {
         const t = stepTriangle(alpha, beta);
+        expect(t.placements.length + t.rootsNotLengths).toBe(t.roots.length);
         for (const each of t.placements) {
-          expect(dist(t.a, each.p)).toBeCloseTo(Math.abs(each.x), 9);
-          expect(dist(each.p, each.q)).toBeCloseTo(Math.abs(each.x), 9);
-          expect(dist(each.q, t.b)).toBeCloseTo(Math.abs(each.x), 9);
+          expect(each.x).toBeGreaterThan(0);
+          expect(dist(t.a, each.p)).toBeCloseTo(each.x, 9);
+          expect(dist(each.p, each.q)).toBeCloseTo(each.x, 9);
+          expect(dist(each.q, t.b)).toBeCloseTo(each.x, 9);
           expect(Math.abs(stepResidual(t, each.x))).toBeLessThan(1e-9);
         }
         // Two distinct real roots unless the equation is linear: part (ii).
@@ -350,10 +385,22 @@ describe('the featured question', () => {
     expect(clampStepAngles(60, 45, 'alpha')).toEqual([60, 60]);
     expect(clampStepAngles(60, 45, 'beta')).toEqual([45, 45]);
     expect(clampStepAngles(85, 85, 'alpha')).toEqual([85, 85]);
-    expect(clampStepAngles(85, 85, 'beta')[0] + clampStepAngles(85, 85, 'beta')[1]).toBeLessThanOrEqual(
-      STEP_ANGLES.maxSum,
-    );
+    // The case that used to come out as [100, 70]: alpha is capped so beta can follow it.
+    expect(clampStepAngles(100, 45, 'alpha')).toEqual([85, 85]);
+    expect(clampStepAngles(80, 100, 'beta')).toEqual([70, 100]);
     expect(clampStepAngles(-5, 200, 'alpha')[0]).toBe(STEP_ANGLES.min);
+
+    for (let alpha = -10; alpha <= 120; alpha += 5) {
+      for (let beta = -10; beta <= 120; beta += 5) {
+        for (const moved of ['alpha', 'beta'] as const) {
+          const [a, b] = clampStepAngles(alpha, beta, moved);
+          expect(a).toBeGreaterThanOrEqual(STEP_ANGLES.min);
+          expect(a).toBeLessThanOrEqual(b);
+          expect(b).toBeLessThanOrEqual(STEP_ANGLES.max);
+          expect(a + b).toBeLessThanOrEqual(STEP_ANGLES.maxSum);
+        }
+      }
+    }
   });
 
   it('describes where a point landed from its sigma alone', () => {

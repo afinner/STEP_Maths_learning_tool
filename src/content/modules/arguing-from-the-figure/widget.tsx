@@ -23,7 +23,10 @@ import {
   clampStepAngles,
   describeSigma,
   drawnAngleAtM,
+  drawnFailingSteps,
+  drawnFigure,
   failingSteps,
+  nearlyEqual,
   formatDegrees,
   formatLength,
   formatSigma,
@@ -52,54 +55,95 @@ export type Params = PanelParams;
 /** One entry per hypothesis id. The test in test/modules.test.ts enforces this. */
 export const presets: Readonly<Record<string, Params>> = PANEL_CONFIGURATIONS;
 
-function FigurePanel({ params, set }: { params: Params; set: (patch: Partial<Params>) => void }) {
+/** The readout for the figure as it really is. */
+function trueReadout(params: Params): ReadoutItem[] {
   const a = apex(params);
   const figure = trueFigure(a);
-  const angleAtM = drawnAngleAtM(a);
+  if (!isFigure(figure)) {
+    return [
+      {
+        term: 'the construction',
+        value: 'AB = AC: the two lines coincide',
+        tone: 'indeterminate',
+        text: true,
+        note: `no single P is determined, so the argument fails at step ${failingSteps(a).join(', ')}`,
+      },
+    ];
+  }
+  return [
+    { term: 'AB', value: formatLength(figure.sides.ab) },
+    { term: 'AC', value: formatLength(figure.sides.ca) },
+    {
+      term: 'σ at F, on AB',
+      value: formatSigma(figure.f.sigma),
+      tone: figure.f.sigma < 0 ? 'broken' : 'ok',
+      note: describeSigma(figure.f.sigma),
+    },
+    {
+      term: 'σ at G, on AC',
+      value: formatSigma(figure.g.sigma),
+      tone: figure.g.sigma < 0 ? 'broken' : 'ok',
+      note: describeSigma(figure.g.sigma),
+    },
+    {
+      term: 'the false step',
+      value: `step ${theFalseStep(a)}`,
+      tone: 'decisive',
+      text: true,
+      note: `the addition on the shorter side, ${figure.sides.ab < figure.sides.ca ? 'AB' : 'AC'}`,
+    },
+  ];
+}
 
-  const items: ReadoutItem[] = isFigure(figure)
-    ? [
-        { term: 'AB', value: formatLength(figure.sides.ab) },
-        { term: 'AC', value: formatLength(figure.sides.ca) },
-        {
-          term: 'σ at F, on AB',
-          value: formatSigma(figure.f.sigma),
-          tone: figure.f.sigma < 0 ? 'broken' : 'ok',
-          note: describeSigma(figure.f.sigma),
-        },
-        {
-          term: 'σ at G, on AC',
-          value: formatSigma(figure.g.sigma),
-          tone: figure.g.sigma < 0 ? 'broken' : 'ok',
-          note: describeSigma(figure.g.sigma),
-        },
-        ...(params.view === 'drawn'
-          ? [
-              {
-                term: 'angle at M, as drawn',
-                value: formatDegrees(angleAtM),
-                tone: 'broken' as const,
-                note: 'the price of putting P inside: PM is not perpendicular to BC',
-              },
-            ]
-          : []),
-        {
-          term: 'the false step',
-          value: `step ${theFalseStep(a)}`,
-          tone: 'decisive',
-          text: true,
-          note: `the addition on the shorter side, ${figure.sides.ab < figure.sides.ca ? 'AB' : 'AC'}`,
-        },
-      ]
-    : [
-        {
-          term: 'the construction',
-          value: 'AB = AC: the two lines coincide',
-          tone: 'indeterminate',
-          text: true,
-          note: `no single P is determined, so the argument fails at step ${failingSteps(a).join(', ')}`,
-        },
-      ];
+/**
+ * The readout for the figure as it gets drawn. Every number here is measured
+ * on the drawn figure: both feet are inside, and what fails instead is what
+ * the drawing paid with at M.
+ */
+function drawnReadout(params: Params): ReadoutItem[] {
+  const a = apex(params);
+  const figure = drawnFigure(a);
+  const angleAtM = drawnAngleAtM(a);
+  const failing = drawnFailingSteps(a);
+  const rightAngle = nearlyEqual(angleAtM, 90);
+  return [
+    { term: 'AB', value: formatLength(figure.sides.ab) },
+    { term: 'AC', value: formatLength(figure.sides.ca) },
+    {
+      term: 'σ at F, on AB',
+      value: formatSigma(figure.f.sigma),
+      tone: 'ok',
+      note: describeSigma(figure.f.sigma),
+    },
+    {
+      term: 'σ at G, on AC',
+      value: formatSigma(figure.g.sigma),
+      tone: 'ok',
+      note: describeSigma(figure.g.sigma),
+    },
+    {
+      term: 'angle at M, as drawn',
+      value: formatDegrees(angleAtM),
+      tone: rightAngle ? 'ok' : 'broken',
+      note: rightAngle
+        ? 'a right angle: on the line of symmetry the drawn P is on both lines'
+        : 'the price of putting P inside: PM is not perpendicular to BC',
+    },
+    {
+      term: failing.length === 1 ? 'the false step' : 'the false steps',
+      value: failing.length === 0 ? 'none' : failing.map((n) => `step ${n}`).join(' and '),
+      tone: 'decisive',
+      text: true,
+      note:
+        failing.length === 0
+          ? 'every step holds here, and AB = AC is true'
+          : 'the drawn P is off the perpendicular bisector, so PB ≠ PC and the congruence built on it fails',
+    },
+  ];
+}
+
+function FigurePanel({ params, set }: { params: Params; set: (patch: Partial<Params>) => void }) {
+  const items = params.view === 'drawn' ? drawnReadout(params) : trueReadout(params);
 
   return (
     <Panel
@@ -263,7 +307,13 @@ function StepPanel({ params, set }: { params: Params; set: (patch: Partial<Param
         ? `${q1.toFixed(3)}x + 1 = 0`
         : `${q2.toFixed(3)}x² ${q1 < 0 ? '−' : '+'} ${Math.abs(q1).toFixed(3)}x + 1 = 0`,
       text: true,
-      note: triangle.linear ? 'α + β = 120°: one root' : `${triangle.roots.length} real root${triangle.roots.length === 1 ? '' : 's'}`,
+      note: triangle.linear
+        ? 'α + β = 120°: one root'
+        : `${triangle.roots.length} real root${triangle.roots.length === 1 ? '' : 's'}${
+            triangle.rootsNotLengths > 0
+              ? `, ${triangle.rootsNotLengths} of them negative: algebra, not a length, so not drawn`
+              : ''
+          }`,
     },
     ...(placement
       ? [
@@ -315,7 +365,7 @@ function StepPanel({ params, set }: { params: Params; set: (patch: Partial<Param
               display={`α = ${params.alphaDegrees}°`}
               value={params.alphaDegrees}
               min={STEP_ANGLES.min}
-              max={STEP_ANGLES.max}
+              max={STEP_ANGLES.alphaMax}
               onChange={(alpha) => {
                 const [alphaDegrees, betaDegrees] = clampStepAngles(alpha, params.betaDegrees, 'alpha');
                 set({ alphaDegrees, betaDegrees });

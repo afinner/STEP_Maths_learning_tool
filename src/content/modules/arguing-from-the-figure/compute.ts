@@ -266,6 +266,9 @@ export function drawnAngleAtM(a: Point): number {
  * The argument
  * -------------------------------------------------------------------------- */
 
+/** What the steps need to know about a figure: true or drawn, the shape is the same. */
+export type FigureLike = Pick<Figure, 'a' | 'p' | 'm' | 'f' | 'g' | 'sides'>;
+
 export interface ArgumentStep {
   readonly n: number;
   /** What the step claims, in this module's words. */
@@ -278,7 +281,7 @@ export interface ArgumentStep {
    * construction determines the points it names, which is why a degenerate
    * figure fails at step 1 rather than anywhere later.
    */
-  readonly holdsIn: (figure: Figure) => boolean;
+  readonly holdsIn: (figure: FigureLike) => boolean;
 }
 
 export const STEPS: readonly ArgumentStep[] = [
@@ -344,7 +347,25 @@ export const CONCLUSION = 'AB = AC, so the triangle is isosceles.';
 export function failingSteps(a: Point): number[] {
   const figure = trueFigure(a);
   if (!isFigure(figure)) return [1];
+  return failingStepsIn(figure);
+}
+
+/** The steps that are false of a given figure, whichever figure it is. */
+export function failingStepsIn(figure: FigureLike): number[] {
   return STEPS.filter((step) => !step.holdsIn(figure)).map((step) => step.n);
+}
+
+/**
+ * Which steps are false of the figure as it gets drawn.
+ *
+ * With P inside, both feet are inside and the two additions are sound. What
+ * fails instead is what the drawing paid with: its P is on the bisector of A
+ * but not on the perpendicular bisector of BC, so PB = PC is false and so is
+ * the congruence built on it. On the line of symmetry the incentre is on both
+ * lines, every step holds, and the conclusion AB = AC is simply true.
+ */
+export function drawnFailingSteps(a: Point): number[] {
+  return failingStepsIn(drawnFigure(a));
 }
 
 /** The single false step, or null if a configuration ever has more or fewer. */
@@ -466,7 +487,11 @@ export function sigmaSweep(yTenths: number): SigmaSample[] {
  * and nothing in that derivation says where P and Q are. Every root of (*)
  * is a genuine configuration; the figure shows one of them.
  */
-export const STEP_ANGLES = { min: 5, max: 100, maxSum: 170 } as const;
+/**
+ * The ranges the sliders offer. alpha is capped at half the maximum sum, so
+ * beta = alpha is always available and alpha <= beta can always be kept.
+ */
+export const STEP_ANGLES = { min: 5, max: 100, alphaMax: 85, maxSum: 170 } as const;
 
 export interface StepPlacement {
   readonly x: number;
@@ -492,25 +517,43 @@ export interface StepTriangle {
   /** The coefficients of (*): quadratic, linear, constant. */
   readonly coefficients: readonly [number, number, number];
   readonly linear: boolean;
-  /** Roots of (*), ascending. */
+  /** Every real root of (*), ascending, including any that is not a length. */
   readonly roots: readonly number[];
+  /**
+   * One placement per positive root. x is a length — AP = PQ = QB = x — so a
+   * negative root of (*) is algebra, not geometry: it would put P and Q on the
+   * rays opposite the sides, which is not what the question describes.
+   */
   readonly placements: readonly StepPlacement[];
+  /** How many real roots of (*) are not lengths. */
+  readonly rootsNotLengths: number;
 }
 
 function toRadians(degrees: number): number {
   return (degrees * Math.PI) / 180;
 }
 
-/** Keep alpha <= beta and the triangle open, whichever slider moved. */
+/**
+ * Keep alpha <= beta and alpha + beta <= maxSum, whichever slider moved.
+ *
+ * The moved angle is taken as given (within its range) and the other one is
+ * adjusted; because alpha never exceeds half the maximum sum, both constraints
+ * can always be satisfied at once, and the result is checked rather than
+ * assumed.
+ */
 export function clampStepAngles(alpha: number, beta: number, moved: 'alpha' | 'beta'): [number, number] {
-  let a = Math.max(STEP_ANGLES.min, Math.min(STEP_ANGLES.max, alpha));
+  let a = Math.max(STEP_ANGLES.min, Math.min(STEP_ANGLES.alphaMax, alpha));
   let b = Math.max(STEP_ANGLES.min, Math.min(STEP_ANGLES.max, beta));
   if (moved === 'alpha') {
-    if (b < a) b = a;
-    if (a + b > STEP_ANGLES.maxSum) b = STEP_ANGLES.maxSum - a;
+    b = Math.max(a, Math.min(b, STEP_ANGLES.maxSum - a));
   } else {
-    if (a > b) a = b;
-    if (a + b > STEP_ANGLES.maxSum) a = STEP_ANGLES.maxSum - b;
+    a = Math.min(b, a, STEP_ANGLES.maxSum - b);
+    a = Math.max(STEP_ANGLES.min, a);
+    // If beta is so small that even alpha = min is above it, raise beta.
+    if (b < a) b = a;
+  }
+  if (a > b || a + b > STEP_ANGLES.maxSum) {
+    throw new Error(`clampStepAngles produced an invalid pair: ${a}, ${b}`);
   }
   return [a, b];
 }
@@ -543,7 +586,8 @@ export function stepTriangle(alphaDegrees: number, betaDegrees: number): StepTri
   }
   roots.sort((u, v) => u - v);
 
-  const placements = roots.map((x): StepPlacement => {
+  const lengths = roots.filter((x) => x > 0);
+  const placements = lengths.map((x): StepPlacement => {
     const p: Point = { x: x * Math.cos(alpha), y: x * Math.sin(alpha) };
     const q: Point = { x: 1 - x * Math.cos(beta), y: x * Math.sin(beta) };
     const tP = x / ac;
@@ -564,6 +608,7 @@ export function stepTriangle(alphaDegrees: number, betaDegrees: number): StepTri
     linear,
     roots,
     placements,
+    rootsNotLengths: roots.length - lengths.length,
   };
 }
 
