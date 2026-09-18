@@ -18,8 +18,9 @@ export function includeDrafts(): boolean {
 }
 
 /**
- * Newest first: the catalogue is a record of what has been worked out, in order.
- * Pure, so the rule is testable without building the site.
+ * Oldest first: module 01 sits top left and the numbering runs on from there,
+ * so the index reads as a catalogue rather than a feed. Pure, so the rule is
+ * testable without building the site.
  */
 export function publishedModules<T extends PublishableEntry>(
   entries: readonly T[],
@@ -27,5 +28,5 @@ export function publishedModules<T extends PublishableEntry>(
 ): T[] {
   return entries
     .filter((entry) => options.includeDrafts || !entry.data.draft)
-    .sort((a, b) => b.data.added.getTime() - a.data.added.getTime());
+    .sort((a, b) => a.data.added.getTime() - b.data.added.getTime());
 }

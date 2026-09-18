@@ -589,6 +589,38 @@ kbd {
   text-transform: uppercase;
 }
 
+.panel-question {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  max-width: var(--measure-card);
+}
+
+.panel-question-label {
+  font-family: var(--font-ui);
+  font-size: var(--size-2xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.panel-question p {
+  font-family: var(--font-prose);
+  font-size: var(--size-lg);
+  line-height: var(--leading-snug);
+  text-wrap: pretty;
+}
+
+.panel-question sub,
+.panel-question sup {
+  font-size: 0.7em;
+  line-height: 0;
+}
+
 .panel-note {
   font-family: var(--font-ui);
   font-size: var(--size-sm);
@@ -1362,4 +1394,56 @@ kbd {
   font-size: var(--size-sm);
   color: var(--break);
   margin-block: var(--space-5) 0;
+}
+
+/* ---- Geometric figures ------------------------------------------------- */
+.figure-frame {
+  min-width: 0;
+}
+
+.figure {
+  max-height: 34rem;
+}
+
+.figure .figure-label {
+  fill: var(--ink);
+  font-family: var(--font-prose);
+  font-style: italic;
+  font-size: 15px;
+}
+
+/* Controls and readout beside a figure, rather than under it. */
+.figure-side {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+  min-width: 0;
+}
+
+.figure-side .controls,
+.figure-side .readout {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.figure-side .controls {
+  grid-template-columns: 1fr;
+}
+
+/* A static figure inside the hook prose. */
+.hook-figure {
+  margin-block: var(--space-5);
+  max-width: 22rem;
+}
+
+.hook-figure svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.hook-figure text {
+  font-family: var(--font-prose);
+  font-style: italic;
+  fill: var(--ink);
 }

@@ -22,12 +22,12 @@ describe('publishedModules', () => {
 
   it('drops drafts from the published site', () => {
     const published = publishedModules(entries, { includeDrafts: false });
-    expect(published.map((e) => e.id)).toEqual(['newest', 'older']);
+    expect(published.map((e) => e.id)).toEqual(['older', 'newest']);
   });
 
-  it('keeps drafts when they are asked for, still newest first', () => {
+  it('keeps drafts when they are asked for, still oldest first', () => {
     const published = publishedModules(entries, { includeDrafts: true });
-    expect(published.map((e) => e.id)).toEqual(['newest', 'in-progress', 'older']);
+    expect(published.map((e) => e.id)).toEqual(['older', 'in-progress', 'newest']);
   });
 
   it('does not mutate what it was given', () => {

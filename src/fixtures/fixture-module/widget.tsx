@@ -41,6 +41,7 @@ export default function FixtureWidget(props: WidgetHostProps) {
           <Panel
             id="fixture-panel"
             title="The running mean"
+            question="Does the mean of the first n terms tend to zero?"
             lead="One non-zero term, averaged against everything before and after it."
           >
             <RunningValue

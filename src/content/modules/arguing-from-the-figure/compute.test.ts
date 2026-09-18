@@ -252,3 +252,123 @@ describe('the ledger configurations', () => {
     expect(distance(figure.a, B)).toBeLessThan(distance(figure.a, C));
   });
 });
+
+/* -------------------------------------------------------------------------- *
+ * The redesign: the circle, the sweep, and the featured question
+ * -------------------------------------------------------------------------- */
+
+import {
+  PANEL_CONFIGURATIONS,
+  STEP_ANGLES,
+  circumcircle,
+  clampStepAngles,
+  describeSigma,
+  sigmaSweep,
+  stepResidual,
+  stepTriangle,
+} from './compute';
+
+describe('the circle P lies on', () => {
+  it('passes through A, B, C and P, wherever A is', () => {
+    for (const a of reachable()) {
+      const figure = trueFigure(a);
+      const circle = circumcircle(a);
+      if (!isFigure(figure) || !circle) continue;
+      for (const point of [a, B, C, figure.p]) {
+        expect(distance(circle.centre, point)).toBeCloseTo(circle.radius, 8);
+      }
+    }
+  });
+});
+
+describe('sliding A across the figure', () => {
+  it('never lets both feet inside their sides, and has no figure exactly at AB = AC', () => {
+    for (const yTenths of [30, 80, 120]) {
+      const sweep = sigmaSweep(yTenths);
+      expect(sweep).toHaveLength(A_X_TENTHS.max - A_X_TENTHS.min + 1);
+      const gaps = sweep.filter((s) => s.sigmaF === null);
+      expect(gaps.map((s) => s.x)).toEqual([6]);
+      for (const s of sweep) {
+        if (s.sigmaF === null || s.sigmaG === null) continue;
+        expect(s.sigmaF * s.sigmaG).toBeLessThan(0);
+      }
+    }
+  });
+});
+
+describe('the featured question', () => {
+  const dist = (p: Point, q: Point) => Math.hypot(p.x - q.x, p.y - q.y);
+
+  it('has roots root two plus or minus one in case (a), and only one of them is the picture', () => {
+    const t = stepTriangle(45, 45);
+    expect(t.linear).toBe(false);
+    expect(t.roots).toHaveLength(2);
+    expect(t.roots[0]).toBeCloseTo(Math.SQRT2 - 1, 9);
+    expect(t.roots[1]).toBeCloseTo(Math.SQRT2 + 1, 9);
+    expect(t.ac).toBeCloseTo(Math.SQRT1_2, 9);
+    const [inside, beyond] = t.placements as [StepPlacementLike, StepPlacementLike];
+    expect(inside.asDrawn).toBe(true);
+    expect(inside.thetaDegrees).toBeCloseTo(0, 6);
+    expect(beyond.asDrawn).toBe(false);
+    expect(beyond.sigmaP).toBeLessThan(0);
+    expect(beyond.sigmaQ).toBeLessThan(0);
+    expect(Math.abs(beyond.thetaDegrees)).toBeCloseTo(180, 6);
+  });
+
+  it('turns linear in case (b), with its one root putting Q at the vertex C', () => {
+    const t = stepTriangle(30, 90);
+    expect(t.linear).toBe(true);
+    expect(t.roots).toHaveLength(1);
+    expect(t.roots[0]).toBeCloseTo(1 / Math.sqrt(3), 9);
+    const [only] = t.placements as [StepPlacementLike];
+    expect(dist(only.q, t.c)).toBeLessThan(1e-9);
+    expect(only.sigmaQ).toBeCloseTo(0, 9);
+    expect(only.tP).toBeCloseTo(0.5, 9);
+    expect(only.asDrawn).toBe(false);
+  });
+
+  it('places P and Q so that AP = PQ = QB = x for every root, whatever the angles', () => {
+    for (let alpha = STEP_ANGLES.min; alpha <= STEP_ANGLES.max; alpha += 10) {
+      for (let beta = alpha; alpha + beta <= STEP_ANGLES.maxSum && beta <= STEP_ANGLES.max; beta += 10) {
+        const t = stepTriangle(alpha, beta);
+        for (const each of t.placements) {
+          expect(dist(t.a, each.p)).toBeCloseTo(Math.abs(each.x), 9);
+          expect(dist(each.p, each.q)).toBeCloseTo(Math.abs(each.x), 9);
+          expect(dist(each.q, t.b)).toBeCloseTo(Math.abs(each.x), 9);
+          expect(Math.abs(stepResidual(t, each.x))).toBeLessThan(1e-9);
+        }
+        // Two distinct real roots unless the equation is linear: part (ii).
+        if (!t.linear) {
+          expect(t.roots).toHaveLength(2);
+          expect(Math.abs((t.roots[1] as number) - (t.roots[0] as number))).toBeGreaterThan(1e-6);
+        }
+      }
+    }
+  });
+
+  it('keeps alpha at most beta and the triangle open, whichever slider moved', () => {
+    expect(clampStepAngles(60, 45, 'alpha')).toEqual([60, 60]);
+    expect(clampStepAngles(60, 45, 'beta')).toEqual([45, 45]);
+    expect(clampStepAngles(85, 85, 'alpha')).toEqual([85, 85]);
+    expect(clampStepAngles(85, 85, 'beta')[0] + clampStepAngles(85, 85, 'beta')[1]).toBeLessThanOrEqual(
+      STEP_ANGLES.maxSum,
+    );
+    expect(clampStepAngles(-5, 200, 'alpha')[0]).toBe(STEP_ANGLES.min);
+  });
+
+  it('describes where a point landed from its sigma alone', () => {
+    expect(describeSigma(0.2)).toMatch(/inside/);
+    expect(describeSigma(0)).toMatch(/vertex/);
+    expect(describeSigma(-0.3)).toMatch(/produced/);
+  });
+
+  it('carries the ledger configurations into the panel state', () => {
+    expect(Object.keys(PANEL_CONFIGURATIONS).sort()).toEqual(Object.keys(CONFIGURATIONS).sort());
+    for (const [id, params] of Object.entries(CONFIGURATIONS)) {
+      expect(PANEL_CONFIGURATIONS[id]).toMatchObject(params);
+      expect(PANEL_CONFIGURATIONS[id]?.view).toBe('true');
+    }
+  });
+});
+
+type StepPlacementLike = ReturnType<typeof stepTriangle>['placements'][number];

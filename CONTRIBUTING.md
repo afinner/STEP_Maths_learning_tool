@@ -207,7 +207,12 @@ export default function Widget(props: WidgetHostProps) {
   return (
     <ExploreShell {...props} initial={initial} presets={presets}>
       {(params, setParams) => (
-        <Panel id="mean-panel" title="The running mean" lead="Drag n out.">
+        <Panel
+          id="mean-panel"
+          title="The running mean"
+          question="Does the mean of the first n terms tend to zero?"
+          lead="Drag n out."
+        >
           {/* a chart */}
           <Controls>{/* Slider, Choice, Select */}</Controls>
           <Readout items={[{ term: 's / n', value: '…', tone: 'decisive' }]} />
@@ -222,7 +227,10 @@ export default function Widget(props: WidgetHostProps) {
 `ExploreShell` owns one parameter object for the whole widget and the
 "break it" chips. A widget is one or more `Panel`s; each panel is one idea — a
 picture, its controls, and a `Readout` of the numbers, with the decisive
-quantity given the `decisive` tone. `BreakChips` can go in any panel, and
+quantity given the `decisive` tone. Every panel states the `question` it
+measures, on its own line above the picture, so the reader always knows what
+the numbers are numbers about; when the controls change the question, the
+question line changes with them. `BreakChips` can go in any panel, and
 `only={[...]}` restricts it to the hypotheses that panel's controls can violate.
 
 Controls are native `<input>` and `<button>` elements, so they are

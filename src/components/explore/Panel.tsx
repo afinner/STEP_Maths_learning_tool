@@ -3,6 +3,12 @@ import type { ReactNode } from 'react';
 export interface PanelProps {
   id: string;
   title: string;
+  /**
+   * The question this panel measures, stated on its own so the reader always
+   * knows what the numbers below are numbers about. Changes with the controls
+   * when the panel measures more than one question.
+   */
+  question: ReactNode;
   /** One line under the title saying what to do with the controls. */
   lead?: string;
   children: ReactNode;
@@ -15,7 +21,7 @@ export interface PanelProps {
  * saying it is interactive, because a static-looking chart is easy to scroll
  * past and the whole point of the section is that these move.
  */
-export function Panel({ id, title, lead, children }: PanelProps) {
+export function Panel({ id, title, question, lead, children }: PanelProps) {
   return (
     <section className="panel" aria-labelledby={`${id}-heading`}>
       <header className="panel-head">
@@ -34,6 +40,10 @@ export function Panel({ id, title, lead, children }: PanelProps) {
           interactive
         </span>
       </header>
+      <div className="panel-question">
+        <span className="panel-question-label">The question</span>
+        <p>{question}</p>
+      </div>
       {children}
     </section>
   );

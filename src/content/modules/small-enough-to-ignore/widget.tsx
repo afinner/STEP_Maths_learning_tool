@@ -137,6 +137,11 @@ function HookPanel({ params, set }: { params: Params; set: (patch: Partial<Param
     <Panel
       id="hook-panel"
       title="What you dropped, and what multiplied it"
+      question={
+        <>
+          What is lim<sub>n→∞</sub> n(√(n² + 1) − n)?
+        </>
+      }
       lead="Drag n out to a million. The piece you threw away really does go to zero; the answer does not go with it."
     >
       <LineChart
@@ -261,6 +266,12 @@ function WindowPanel({ params, set }: { params: Params; set: (patch: Partial<Par
     <Panel
       id="window-panel"
       title="The smaller term that is not smaller"
+      question={
+        <>
+          What is lim<sub>α→0</sub> R(θ, α), where R = [sin(θ + α) − sin θ] ÷ [cos(θ + α) − cos θ]?
+          Does the answer depend on θ?
+        </>
+      }
       lead="Keep first order and walk θ towards zero. The α² term you dropped stays put while the α term you kept shrinks to nothing, and there is a window where the dropped one is the bigger."
     >
       <Figures>
@@ -407,6 +418,12 @@ function CuspPanel({ params, set }: { params: Params; set: (patch: Partial<Param
     <Panel
       id="cusp-panel"
       title="The same death, drawn"
+      question={
+        <>
+          A point P traces x = a(n cos θ + cos nθ), y = a(n sin θ + sin nθ). What is the gradient
+          of its path at a cusp, where dx/dθ and dy/dθ are both zero?
+        </>
+      }
       lead="A circle rolls around another and a point on it traces the curve. Drive the point onto a cusp: both first-order coefficients vanish together and the gradient arrives as 0/0."
     >
       <Figures>

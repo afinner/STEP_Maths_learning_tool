@@ -135,6 +135,11 @@ function StatementsPanel({ witness, x, set }: PanelProps) {
     <Panel
       id="statements-panel"
       title="Stand somewhere and ask both statements"
+      question={
+        <>
+          Solve {witness.original.text}. What does it cost to {witness.step}?
+        </>
+      }
       lead="Choose a step, then walk x along the line. Where the two verdicts come apart is the disagreement set, and that set is the whole cost of the step."
     >
       <LineChart
@@ -280,6 +285,12 @@ function OperationPanel({ witness, x, set }: PanelProps) {
     <Panel
       id="operation-panel"
       title="The step, as a graph"
+      question={
+        <>
+          At x = {formatFixed(x, 1)}, is φ: {witness.operation.describe(x)} increasing between the
+          two sides of {witness.original.text}?
+        </>
+      }
       lead="Doing the same thing to both sides is applying a function φ to each. It keeps the order only where φ is increasing between the two sides — and for most steps, φ changes with x."
     >
       <LineChart
